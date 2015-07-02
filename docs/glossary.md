@@ -41,4 +41,4 @@ Terms
 
 
 [DRE_voting_machine]: https://en.wikipedia.org/wiki/DRE_voting_machine
-[SF_Charter_13_102_a]: ../blob/master/statutes/san_francisco.txt#L10
+[SF_Charter_13_102_a]: ../statutes/san_francisco.txt#L10
