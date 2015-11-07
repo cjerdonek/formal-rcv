@@ -1021,14 +1021,6 @@ destruct a. simpl in *. rewrite N.leb_le in *.
 rewrite N.leb_gt in *. apply N.lt_le_incl in H. auto.
 Qed.
 
-Lemma tabulate_continuing :
-forall election rs election' rec,
-sf_imp.tabulate _ _ rec election = (rs, election') ->
-Forall (fun x =>~ in_record rec x)(fst (split rs)) .
-Proof.
-  intros. 
-unfold sf_imp.tabulate in *.
-Check sf_imp.increment.
 
 Lemma increment_not_eliminated : 
 forall vs c rec,
@@ -1102,25 +1094,25 @@ In (cd, ct) (sf_imp.tabulate'' candidate _
 Proof.
 induction ef; intros.
 - simpl in *. rewrite app_nil_r in *. intuition.  
-Admitted.
-(*
-- simpl in *. 
-  destruct ( sf_imp.next_ranking candidate reldec_candidate r a ) eqn:?.
-  + destruct p. simpl.
-    destruct (sf_imp.option_split
-                (map (sf_imp.next_ranking candidate reldec_candidate r) ef)) eqn:?.
-    simpl in *. assert (Permutation (es ++ a :: ef) (a :: (es ++ ef))).
+- simpl in *.
+  destruct (sf_imp.next_ranking candidate reldec_candidate r a) eqn:?.
+  + destruct p. destruct (sf_imp.option_split
+                  (map (sf_imp.next_ranking candidate reldec_candidate r) ef)) eqn:?.
+    assert (l = fst ( sf_imp.option_split
+           (map (sf_imp.next_ranking candidate reldec_candidate r) ef))) by (rewrite Heqp; auto).
+    subst. simpl. 
+    assert (Permutation (es ++ a :: ef) (a :: (es ++ ef))).
     rewrite Permutation_middle. auto.
     eapply first_choices_perm in H1; eauto.
-    clear H0.
+    clear H2.
     inv H1.
     * apply next_ranking_selected in Heqo; auto.
-      eapply sf_spec.selected_candidate_unique in Heqo; eauto. subst.
-      assert (l = fst ( sf_imp.option_split
-           (map (sf_imp.next_ranking candidate reldec_candidate r) ef))).
-     rewrite Heqp. auto.
-     subst. 
-Admitted. *)
+       eapply sf_spec.selected_candidate_unique in Heqo; eauto. subst.
+       assert (n' = N.to_nat (N.pred ct)). 
+        { clear - H4. rewrite Nnat.N2Nat.inj_pred.
+          destruct (N.to_nat ct). congruence. inv H4. simpl. auto.
+        }
+Admitted.
 
 Lemma tabulate'_first_choices_complete : forall l cd ct r,
 ct <> 0 ->
@@ -1333,6 +1325,7 @@ destruct rs.
       unfold sf_spec.is_loser.
       split.
       split.
+      rewrite Forall_forall in *.
       admit. (*TODO*)
       admit.
       intros ? ? ? [??] ? ?.
@@ -1747,3 +1740,4 @@ apply run_election'_correct in H; auto.
 Qed. 
 
 
+End cand.

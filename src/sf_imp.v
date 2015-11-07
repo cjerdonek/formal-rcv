@@ -54,7 +54,7 @@ match l with
 | Some x :: t => x :: drop_none t
 | [] => []
 end.
-Locate "+".
+
 Fixpoint increment (r : list (candidate * N)) (c : candidate) :=
 match r with 
 | (c1, n) :: t => if (eq_dec c1 c) then (c1, (n + 1)) :: t else (c1, n) :: increment t c
@@ -198,8 +198,6 @@ match fuel with
 | _ => (None, rec)
 end.
 
-Check filter.
-
 Definition find_0s (all_candidates : list candidate) (el : election) :=
 let get_candidates := (map (next_ranking nil) el) in
 let (next_ranks, _) := option_split (get_candidates) in
@@ -213,6 +211,18 @@ run_election' elect ([find_0s all_candidates elect]) (length elect).
 
 
 End candidate.
+
+Extract Inductive bool => bool [ true false ].
+Extract Inductive option => option [ Some None ].
+Extract Inductive unit => unit [ "()" ].
+Extract Inductive list => list [ "[]" "( :: )" ].
+Extract Inductive prod => "( * )" [ "" ].
+Extract Inductive sumbool => bool [ true false ].
+Extract Inductive sumor => option [ Some None ].
+
+
+Extraction "sf_imp.ml" run_election.
+
 
 Global Instance RelDec_eq : RelDec (@eq nat) :=
 { rel_dec := EqNat.beq_nat }.
@@ -256,10 +266,11 @@ Definition election1 :=
 
 Definition election2 := repeat_append election1 1000.
 
-Compute (nat_tabulate nil (election1)).
+(*Compute (nat_tabulate nil (election1)).*)
 
 Definition tiebreak (l : list nat) :=
 match l with
 | h :: t => Some h
 | _ => None
 end.
+
