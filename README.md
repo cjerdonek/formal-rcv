@@ -64,6 +64,8 @@ Contributors
 ------------
 
 * Chris Jerdonek
+* Joey Dodds
+* Rob Dockins
 
 
 [berkeley_codes]: http://codepublishing.com/ca/berkeley/
