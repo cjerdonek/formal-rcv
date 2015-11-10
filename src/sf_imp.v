@@ -51,8 +51,8 @@ end.
 Fixpoint drop_none {A} (l : list (option A)) :=
 match l with
 | None :: t => drop_none t
-| Some x :: t => x :: drop_none t
-| [] => []
+| Some x :: t => x::drop_none t
+| [] => [] : list A
 end.
 
 Fixpoint increment (r : list (candidate * N)) (c : candidate) :=
@@ -212,18 +212,6 @@ run_election' elect ([find_0s all_candidates elect]) (length elect).
 
 End candidate.
 
-Extract Inductive bool => bool [ true false ].
-Extract Inductive option => option [ Some None ].
-Extract Inductive unit => unit [ "()" ].
-Extract Inductive list => list [ "[]" "( :: )" ].
-Extract Inductive prod => "( * )" [ "" ].
-Extract Inductive sumbool => bool [ true false ].
-Extract Inductive sumor => option [ Some None ].
-
-
-Extraction "sf_imp.ml" run_election.
-
-
 Global Instance RelDec_eq : RelDec (@eq nat) :=
 { rel_dec := EqNat.beq_nat }.
 
@@ -274,3 +262,75 @@ match l with
 | _ => None
 end.
 
+Parameter T : Set.
+
+Parameter eqb_t : T -> T -> bool.
+
+Parameter reldec_t : @RelDec T eq.
+
+Definition option_eq {A} (eq : A -> A -> bool) (a b : option A)  : bool :=
+match a,b with
+| Some a', Some b' => eq a' b'
+| None, None => true
+| _, _ => false
+end.  
+
+Definition option_eq_t := option_eq eqb_t.
+
+Definition prop_drop_none_keeps (l : list (option T)) (i : T) : bool :=
+  Bool.eqb (existsb (option_eq_t (Some i)) l) (existsb (eqb_t i) (drop_none l)).
+
+Definition prop_next_ranking_contains rec bal :=
+match (next_ranking T _ rec bal) with
+| Some (c, _) => existsb (existsb (eqb_t c)) bal
+| _ => true
+end.
+
+Definition prop_next_ranking_not_eliminated rec bal :=
+match (next_ranking T _ rec bal) with
+| Some (c, _) => negb (eliminated T _ rec c)
+| _ => true
+end.
+
+
+Definition all_props :=
+(prop_drop_none_keeps,
+prop_next_ranking_contains,
+prop_next_ranking_not_eliminated).
+(*
+Extract Inductive bool => bool [ true false ].
+Extract Inductive option => option [ Some None ].
+Extract Inductive unit => unit [ "()" ].
+Extract Inductive list => list [ "[]" "( :: )" ].
+Extract Inductive prod => "( * )" [ "" ].
+Extract Inductive sumbool => bool [ true false ].
+Extract Inductive sumor => option [ Some None ].
+
+
+Extraction "sf_imp.ml" run_election. *)
+
+Extraction Language Haskell.
+
+Unset Extraction KeepSingleton.
+Set Extraction AutoInline.
+Set Extraction Optimize.
+Set Extraction AccessOpaque.
+
+Extract Inductive unit    => "()" [ "()" ].
+Extract Inductive bool    => "Prelude.Bool" ["Prelude.True" "Prelude.False"].
+Extract Inductive sumbool => "Prelude.Bool" ["Prelude.True" "Prelude.False"].
+Extract Inductive sum     => "Prelude.Either" [ "Prelude.Left" "Prelude.Right" ].
+Extract Inductive list    => "[]" ["[]" "(:)"].
+Extract Inductive prod    => "(,)" ["(,)"].
+Extract Inductive sigT    => "(,)" ["(,)"].
+Extract Inductive option  => "Prelude.Maybe" ["Prelude.Just" "Prelude.Nothing"].
+Extract Inductive sumor   => "Prelude.Maybe" ["Prelude.Just" "Prelude.Nothing"].
+
+(* this stuff is for quickcheck, should not have soundness implications *)
+Extract Inlined Constant Bool.eqb => "(Prelude.==)".
+Extract Inlined Constant option_eq_t => "(Prelude.==)".
+Extract Constant T => "Prelude.Int".
+Extract Inlined Constant eqb_t => "(Prelude.==)".
+Extract Inlined Constant reldec_t => "(Prelude.==)".
+
+Extraction "sf_imp.hs" run_election all_props.
