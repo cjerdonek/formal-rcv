@@ -1,13 +1,13 @@
-Require sf_imp.
-Require sf_spec.
-Require Import sf_lemmas.
+Require SF_imp.
+Require SF_spec.
+Require Import SF_lemma.
 Require Import RelDec.
 Require Import List.
 Require Import Sorted.
 Require Import Permutation.
 Require Import FunctionalExtensionality.
 Require Import Classical.
-Require Import sf_tactic.
+Require Import SF_tactic.
 Require Import Coq.Numbers.BinNums.
 Require Import Coq.NArith.BinNat.
 
@@ -22,13 +22,13 @@ Variable reldec_correct_candidate : RelDec_Correct reldec_candidate.
 
 Local Open Scope N_scope.
 
-Ltac solve_rcv := sf_tactic.solve_rcv reldec_correct_candidate.
-Ltac intuition_nosplit := sf_tactic.intuition_nosplit reldec_correct_candidate.
+Ltac solve_rcv := SF_tactic.solve_rcv reldec_correct_candidate.
+Ltac intuition_nosplit := SF_tactic.intuition_nosplit reldec_correct_candidate.
 
 Lemma no_viable_candidates_correct : 
 forall rec bal,
-sf_imp.no_viable_candidates candidate _ rec bal = true -> 
-sf_spec.no_viable_candidates candidate (in_record rec) bal.
+SF_imp.no_viable_candidates candidate _ rec bal = true -> 
+SF_spec.no_viable_candidates candidate (in_record rec) bal.
 Proof.
 solve_rcv.  
 specialize (H _ H0). solve_rcv.  
@@ -41,7 +41,7 @@ Qed.
 
 Lemma eliminated_correct :
 forall rec can,
-sf_imp.eliminated candidate _ rec can = true <->
+SF_imp.eliminated candidate _ rec can = true <->
 in_record rec can.
 Proof.
 split; solve_rcv.
@@ -50,17 +50,17 @@ split; solve_rcv.
 Qed.
 
 (*
-Definition no_viable_candidates eliminated (b : sf_spec.ballot candidate) :=
+Definition no_viable_candidates eliminated (b : SF_spec.ballot candidate) :=
 Forall (Forall eliminated) b.
 
 Lemma no_viable_candidates_Forall :
 forall eliminated b,
 no_viable_candidates eliminated b <->
-sf_spec.no_viable_candidates candidate eliminated b.
+SF_spec.no_viable_candidates candidate eliminated b.
 Proof.
 intros.
 unfold no_viable_candidates.
-unfold sf_spec.no_viable_candidates.
+unfold SF_spec.no_viable_candidates.
 intuition. rewrite Forall_forall in *.
 specialize (H rank). rewrite Forall_forall in H. 
 intuition.
@@ -84,8 +84,8 @@ end.
 
 Lemma next_ranking_not_overvote :
 forall rec bal cd bal' a,
-sf_imp.next_ranking candidate _ rec (a :: bal) = Some (cd, bal') ->
-~sf_spec.overvote candidate a.
+SF_imp.next_ranking candidate _ rec (a :: bal) = Some (cd, bal') ->
+~SF_spec.overvote candidate a.
 Proof.
 intros. intro.
 simpl in *. 
@@ -95,10 +95,10 @@ simpl in *; intuition; subst; solve_rcv.
 Qed.
 
 Lemma next_ranking_selects : forall a bal cd bal' rec,
-    sf_imp.next_ranking candidate reldec_candidate rec (a :: bal) =
+    SF_imp.next_ranking candidate reldec_candidate rec (a :: bal) =
     Some (cd, bal') ->
-    sf_spec.does_not_select candidate (in_record rec) a ->
-    sf_imp.next_ranking candidate reldec_candidate rec (bal) = Some (cd, bal').
+    SF_spec.does_not_select candidate (in_record rec) a ->
+    SF_imp.next_ranking candidate reldec_candidate rec (bal) = Some (cd, bal').
 Proof.
 intros.
 destruct a; simpl in *; solve_rcv.
@@ -114,14 +114,14 @@ Hint Resolve next_ranking_not_overvote : rcv.
 
 Lemma next_ranking_correct :
 forall rec bal cd bal' ,
-sf_imp.next_ranking candidate _ rec bal = Some (cd, bal') ->
-exists h t,(sf_spec.next_ranking candidate (in_record rec) bal (h::t) /\ Forall (Logic.eq cd) (h::t)).
+SF_imp.next_ranking candidate _ rec bal = Some (cd, bal') ->
+exists h t,(SF_spec.next_ranking candidate (in_record rec) bal (h::t) /\ Forall (Logic.eq cd) (h::t)).
 Proof.
 intros.
 induction bal.
 - solve_rcv. 
 - solve_rcv.
-  destruct (sf_spec.ranking_cases _  (in_record rec) a); [ | destruct H0].
+  destruct (SF_spec.ranking_cases _  (in_record rec) a); [ | destruct H0].
   + apply next_ranking_not_overvote in H. intuition.
   + solve_rcv. destruct a; simpl in *; solve_rcv. 
     * { destruct H1. 
@@ -136,9 +136,9 @@ induction bal.
       }
     * { destruct H1. 
         - subst. exists x. exists a. solve_rcv.
-          eapply sf_spec.next_ranking_valid; solve_rcv.
+          eapply SF_spec.next_ranking_valid; solve_rcv.
         - exists cd.  exists a. 
-          solve_rcv. eapply sf_spec.next_ranking_valid; solve_rcv.
+          solve_rcv. eapply SF_spec.next_ranking_valid; solve_rcv.
           simpl in H1. intuition.
           force_specialize_all; solve_rcv.
       }
@@ -157,8 +157,8 @@ Qed.
 
 Lemma overvote_cons_or :
 forall b1 bal e ,
-sf_spec.overvote candidate e (b1 :: bal) ->
-sf_spec.overvote candidate e [b1] \/ sf_spec.overvote candidate e bal.
+SF_spec.overvote candidate e (b1 :: bal) ->
+SF_spec.overvote candidate e [b1] \/ SF_spec.overvote candidate e bal.
 Proof.
 intros.
 inv H.  
@@ -166,15 +166,15 @@ intuition.
 destruct H1. destruct H0.
 intuition.
 edestruct (next_ranking_cons_or); eauto.
-- unfold sf_spec.overvote.
+- unfold SF_spec.overvote.
   left. exists x. split; eauto.
-- right. unfold sf_spec.overvote. exists x; split; eauto.
+- right. unfold SF_spec.overvote. exists x; split; eauto.
 Qed.
 
 Lemma next_ranking_not_overvote :
 forall rec bal cd bal',
-sf_imp.next_ranking candidate _ rec bal = Some (cd, bal') ->
-~sf_spec.overvote candidate (in_record rec) bal.
+SF_imp.next_ranking candidate _ rec bal = Some (cd, bal') ->
+~SF_spec.overvote candidate (in_record rec) bal.
 Proof.
 intros.
 induction bal.
@@ -182,15 +182,15 @@ induction bal.
 - simpl in *.
   destruct a.
   + intro.
-    unfold sf_spec.overvote in H0.
+    unfold SF_spec.overvote in H0.
     destruct H0.
     destruct H0.
     simpl in H0.
     intuition. 
-    unfold sf_spec.overvote in H2. apply H2. eauto.
+    unfold SF_spec.overvote in H2. apply H2. eauto.
     subst. destruct H1. destruct H1. intuition.
   + destruct (forallb (eq_dec c) a) eqn:?.
-    * { destruct (sf_imp.eliminated candidate reldec_candidate rec c) eqn:?.
+    * { destruct (SF_imp.eliminated candidate reldec_candidate rec c) eqn:?.
         - intuition. 
           edestruct (overvote_cons_or); eauto.
           + rewrite forallb_forall in *. 
@@ -238,9 +238,9 @@ Qed. *)
 
 Lemma next_ranking_viable :
 forall bal rec cd bal',
-sf_imp.next_ranking candidate reldec_candidate rec bal =
+SF_imp.next_ranking candidate reldec_candidate rec bal =
       Some (cd, bal') ->
-~sf_spec.no_viable_candidates candidate (in_record rec) bal.
+~SF_spec.no_viable_candidates candidate (in_record rec) bal.
 Proof.
 induction bal; intros.
 - simpl in *. congruence.
@@ -248,13 +248,13 @@ induction bal; intros.
   + intro. apply no_viable_candidates_cons in H0. destruct H0.
     eapply IHbal in H1; eauto.
   + destruct (forallb (eq_dec c) a).
-    * { destruct (sf_imp.eliminated candidate reldec_candidate rec c) eqn:?.
+    * { destruct (SF_imp.eliminated candidate reldec_candidate rec c) eqn:?.
         - apply eliminated_correct in Heqb.
           intro. apply no_viable_candidates_cons in H0.
           destruct H0.
           eapply IHbal in H1; eauto.
         - inv H. intro. apply no_viable_candidates_cons in H. destruct H.
-          unfold sf_spec.no_viable_candidates in H. 
+          unfold SF_spec.no_viable_candidates in H. 
           specialize (H (cd :: a)). simpl in H. intuition. clear H2.
           specialize (H cd). intuition. clear H2. 
           rewrite <- eliminated_correct in H. congruence.
@@ -267,8 +267,8 @@ Qed.
 
 Lemma next_ranking_selected :
 forall bal cd bal' rec,
-sf_imp.next_ranking candidate _ rec bal = Some (cd, bal') ->
-sf_spec.selected_candidate candidate (in_record rec) bal cd.
+SF_imp.next_ranking candidate _ rec bal = Some (cd, bal') ->
+SF_spec.selected_candidate candidate (in_record rec) bal cd.
 solve_rcv.
 - destruct H0.
  + apply H0; clear H0.
@@ -286,8 +286,8 @@ Qed.
 
 Lemma next_ranking_eliminated :
 forall bal rec,
-sf_imp.next_ranking candidate _ rec bal = None ->
-sf_spec.exhausted_ballot candidate (in_record rec) bal.
+SF_imp.next_ranking candidate _ rec bal = None ->
+SF_spec.exhausted_ballot candidate (in_record rec) bal.
 Proof.
 intros. 
 induction bal.
@@ -313,7 +313,7 @@ induction bal.
       constructor; solve_rcv. exists x; inv H6; force_specialize_all; solve_rcv.
       simpl in *. intuition; force_specialize_all; solve_rcv.
   + right. clear IHbal. exists (c::a). solve_rcv.
-    eapply sf_spec.next_ranking_valid. simpl. auto.
+    eapply SF_spec.next_ranking_valid. simpl. auto.
     left. solve_rcv. exists x. exists c. 
     simpl. auto.
     exists x. exists c. simpl. auto.
@@ -329,7 +329,7 @@ end.
 Lemma insert_sorted : forall {A} c sorted (a : A),
     (forall a b, c a b = false -> c b a = true) ->
     Sorted (boolCmpToProp c) sorted ->
-    Sorted (boolCmpToProp c) (sf_imp.insert c a sorted).
+    Sorted (boolCmpToProp c) (SF_imp.insert c a sorted).
 intros.
 induction H0.
 - simpl. auto.
@@ -354,7 +354,7 @@ Qed.
 Lemma insertion_sort_sorted' : forall {A} (l : list A) (sorted : list A) c,
     (forall a b, c a b = false -> c b a = true) -> 
     Sorted (boolCmpToProp c) sorted ->
-    Sorted (boolCmpToProp c) (sf_imp.insertionsort' c l sorted).   
+    Sorted (boolCmpToProp c) (SF_imp.insertionsort' c l sorted).   
 Proof.
 induction l.
 + intros. simpl. auto.
@@ -364,7 +364,7 @@ Qed.
 
 Lemma insertion_sort_sorted : forall {A} (l : list A) c,
     (forall a b, c a b = false -> c b a = true) -> 
-    Sorted (boolCmpToProp c) (sf_imp.insertionsort c l). 
+    Sorted (boolCmpToProp c) (SF_imp.insertionsort c l). 
 intros.
 apply insertion_sort_sorted'; auto.
 Qed.
@@ -372,7 +372,7 @@ Qed.
 Lemma insert_permutation :
   forall {A} l2 l1  (a : A) c,
     Permutation l1 l2 ->
-    Permutation (a :: l1) (sf_imp.insert c a l2).
+    Permutation (a :: l1) (SF_imp.insert c a l2).
 Proof.
 induction l2; intros. 
 - apply Permutation_sym in H. apply Permutation_nil in H. subst. simpl in *. auto.
@@ -387,7 +387,7 @@ Qed.
 Lemma insertion_sort_permutation' :
   forall {A} (le ls : list A) c sorted,
     Permutation ls sorted -> 
-    Permutation (ls ++ le) (sf_imp.insertionsort' c le sorted).
+    Permutation (ls ++ le) (SF_imp.insertionsort' c le sorted).
 Proof.
 induction le; intros.
 - simpl in *. rewrite app_nil_r. auto.
@@ -398,9 +398,9 @@ Qed.
 
 Lemma insertion_sort_permutation :
   forall {A} (l : list A) c,
-    Permutation l (sf_imp.insertionsort c l).
+    Permutation l (SF_imp.insertionsort c l).
 intros. rewrite <- app_nil_l at 1.
-unfold sf_imp.insertionsort.
+unfold SF_imp.insertionsort.
 apply insertion_sort_permutation'. auto.
 Qed.
 
@@ -435,8 +435,8 @@ Qed.
 Lemma increment_spec : forall (m : list (candidate *  N)) cd cds (ct : N),
 cds = (fst (split m)) ->
 NoDup (cds) -> 
-(In (cd, ct) m -> In (cd, (ct + 1)%N) (sf_imp.increment candidate _ m cd)) /\
-(~In cd cds -> In (cd, 1%N) (sf_imp.increment candidate _ m cd)). 
+(In (cd, ct) m -> In (cd, (ct + 1)%N) (SF_imp.increment candidate _ m cd)) /\
+(~In cd cds -> In (cd, 1%N) (SF_imp.increment candidate _ m cd)). 
 Proof.
 induction m; intros.
 - simpl in *. intuition.
@@ -483,10 +483,10 @@ Qed.
 
 Lemma increment_not_0 : forall running cd,
 NoDup (fst (split running)) ->
-~In (cd, 0) (sf_imp.increment candidate reldec_candidate running cd).
+~In (cd, 0) (SF_imp.increment candidate reldec_candidate running cd).
 Proof.
 induction running; intros; intro.
-- unfold sf_imp.increment in *. simpl in *; intuition. congruence.
+- unfold SF_imp.increment in *. simpl in *; intuition. congruence.
 - simpl in *. destruct a. destruct (eq_dec c cd) eqn:?.
   + clear IHrunning. apply reldec_correct_candidate in Heqb. subst.
     simpl in *. destruct (split running) eqn:?. simpl in *. 
@@ -502,7 +502,7 @@ Qed.
 Lemma increment_nodup' : forall running cd c,
 ~In c (fst (split running)) ->
 c <> cd ->
-~In c (fst (split (sf_imp.increment candidate reldec_candidate running cd))).
+~In c (fst (split (SF_imp.increment candidate reldec_candidate running cd))).
 Proof.
 induction running; intros.
 - simpl in *. intuition.
@@ -512,21 +512,21 @@ induction running; intros.
   destruct (eq_dec c0 cd) eqn:?.
   + simpl in *. rewrite Heqp in *. simpl in *. intuition.
   + simpl in *. destruct (split
-                   (sf_imp.increment candidate reldec_candidate running cd)) eqn:?.
+                   (SF_imp.increment candidate reldec_candidate running cd)) eqn:?.
     simpl in *. intuition. eapply IHrunning; eauto. 
     rewrite Heqp0. simpl. auto.
 Qed.
 
 Lemma increment_nodup : forall running cd,
 NoDup (fst (split running)) -> 
-NoDup (fst (split (sf_imp.increment candidate reldec_candidate running cd))).
+NoDup (fst (split (SF_imp.increment candidate reldec_candidate running cd))).
 induction running; intros.
 - simpl in *. constructor; auto. 
 - simpl in *. destruct a. destruct (eq_dec c cd) eqn:?.
   + apply reldec_correct_candidate in Heqb. subst.
     simpl in *.
     destruct (split running) eqn:?. simpl in *. auto.
-  + simpl in *. destruct ( split (sf_imp.increment candidate reldec_candidate running cd)) eqn:?.
+  + simpl in *. destruct ( split (SF_imp.increment candidate reldec_candidate running cd)) eqn:?.
     simpl.
     destruct (split running) eqn:?. simpl in *. inv H.
     eapply IHrunning in H3. instantiate (1:=cd) in H3. rewrite Heqp in H3.
@@ -539,7 +539,7 @@ Qed.
 Lemma increment_neq : forall running c cd v,
 In (c, v) running ->
 c <> cd ->
-In (c, v) (sf_imp.increment candidate reldec_candidate running cd).
+In (c, v) (SF_imp.increment candidate reldec_candidate running cd).
 Proof.
 induction running; intros.
 - inv H.
@@ -557,7 +557,7 @@ NoDup (fst (split running)) ->
 In (cd, v) running ->
 v <> 0 ->
 ~In (cd, 0)
-   (sf_imp.tabulate'' candidate reldec_candidate l running).
+   (SF_imp.tabulate'' candidate reldec_candidate l running).
 Proof.
 induction l; intros.
 - simpl in *. intuition. apply H1.
@@ -630,10 +630,10 @@ Lemma tab_inc_s : forall cd ct l running running' cr,
 NoDup (fst (split running)) ->
 NoDup (fst (split running')) ->
 In (cd, ct + 1)
-   (sf_imp.tabulate'' candidate reldec_candidate l running') ->
+   (SF_imp.tabulate'' candidate reldec_candidate l running') ->
 In (cd, cr) running ->
 In (cd, (cr + 1)) running' ->
-In (cd, ct) (sf_imp.tabulate'' candidate reldec_candidate l running).
+In (cd, ct) (SF_imp.tabulate'' candidate reldec_candidate l running).
 Proof.
 induction l; intros.
 - simpl in *. 
@@ -664,7 +664,7 @@ Qed.
 
 
 Lemma increment_neq' : forall running cd ct  c,
-In (cd, ct) (sf_imp.increment candidate reldec_candidate running c) ->
+In (cd, ct) (SF_imp.increment candidate reldec_candidate running c) ->
 c <> cd ->
 In (cd, ct) running.
 Proof.
@@ -683,8 +683,8 @@ NoDup (fst (split running)) ->
 NoDup (fst (split running')) ->
 In (cd, cr) running ->
 In (cd, cr) running' ->
-In (cd, ct) (sf_imp.tabulate'' candidate reldec_candidate l running) ->
-In (cd, ct) (sf_imp.tabulate'' candidate reldec_candidate l running').
+In (cd, ct) (SF_imp.tabulate'' candidate reldec_candidate l running) ->
+In (cd, ct) (SF_imp.tabulate'' candidate reldec_candidate l running').
 Proof.
 induction l; intros.
 - simpl in *. 
@@ -718,8 +718,8 @@ NoDup (fst (split running)) ->
 NoDup (fst (split running')) ->
 ~In cd (fst (split running)) ->
 ~In cd (fst (split running')) ->
-In (cd, ct) (sf_imp.tabulate'' candidate reldec_candidate l running) ->
-In (cd, ct) (sf_imp.tabulate'' candidate reldec_candidate l running').
+In (cd, ct) (SF_imp.tabulate'' candidate reldec_candidate l running) ->
+In (cd, ct) (SF_imp.tabulate'' candidate reldec_candidate l running').
 Proof.
 induction l; intros.
 - simpl in *. intuition. 
@@ -741,12 +741,12 @@ Qed.
 
 Lemma tab_inc_s_l :
 forall l cd ct running,
-In (cd, ct + 1) (sf_imp.tabulate'' candidate reldec_candidate l
-               (sf_imp.increment candidate reldec_candidate running cd)) ->
+In (cd, ct + 1) (SF_imp.tabulate'' candidate reldec_candidate l
+               (SF_imp.increment candidate reldec_candidate running cd)) ->
 ~ In cd (fst (split running)) ->
 NoDup (fst (split running)) ->
 In (Some cd) l ->
-In (cd, ct) (sf_imp.tabulate'' candidate reldec_candidate l running).
+In (cd, ct) (SF_imp.tabulate'' candidate reldec_candidate l running).
 Proof.
 induction l; intros.
 - inv H2.
@@ -778,7 +778,7 @@ forall l cd ct running,
 NoDup (fst (split running)) ->
 In (cd, ct) running ->
 ~In (Some cd) l ->
-In (cd, ct) (sf_imp.tabulate'' candidate reldec_candidate l running).
+In (cd, ct) (SF_imp.tabulate'' candidate reldec_candidate l running).
 Proof.
 induction l; intros.
 - simpl. auto.
@@ -791,7 +791,7 @@ Qed.
 Lemma tabulate_nodup :
 forall l running,
 NoDup (fst (split running)) -> 
-NoDup (fst (split (sf_imp.tabulate'' candidate reldec_candidate l running))).
+NoDup (fst (split (SF_imp.tabulate'' candidate reldec_candidate l running))).
 Proof.
 induction l; intros.
 - simpl.  auto.
@@ -805,39 +805,39 @@ Qed.
 Lemma selected_not_in :
 forall  ef l cd r l0, 
 ~(In (Some cd ) l) ->
-sf_imp.option_split
-           (map (sf_imp.next_ranking candidate reldec_candidate r) ef) =
+SF_imp.option_split
+           (map (SF_imp.next_ranking candidate reldec_candidate r) ef) =
          (l, l0) ->
-sf_spec.first_choices candidate (in_record r) cd ef 0.
+SF_spec.first_choices candidate (in_record r) cd ef 0.
 Proof.
 induction ef; intros.
 - simpl in *. inv H0. constructor.
 - simpl in *. 
-  destruct (sf_imp.next_ranking candidate reldec_candidate r a) eqn:?.
-  + destruct p. destruct (sf_imp.option_split
-                            (map (sf_imp.next_ranking candidate reldec_candidate r) ef)) eqn:?.
+  destruct (SF_imp.next_ranking candidate reldec_candidate r a) eqn:?.
+  + destruct p. destruct (SF_imp.option_split
+                            (map (SF_imp.next_ranking candidate reldec_candidate r) ef)) eqn:?.
     simpl in *. inv H0. simpl in *.
     intuition.
     apply next_ranking_selected in Heqo.
     constructor.
-    intro. eapply sf_spec.selected_candidate_unique in Heqo; eauto.
+    intro. eapply SF_spec.selected_candidate_unique in Heqo; eauto.
     subst; auto.
     eapply IHef; eauto.
-  + destruct (sf_imp.option_split
-              (map (sf_imp.next_ranking candidate reldec_candidate r) ef)) eqn:?.
+  + destruct (SF_imp.option_split
+              (map (SF_imp.next_ranking candidate reldec_candidate r) ef)) eqn:?.
     inv H0.
     simpl in *.
-    apply sf_spec.first_choices_not_selected.
-    intro. intuition. unfold sf_spec.selected_candidate in H0.
+    apply SF_spec.first_choices_not_selected.
+    intro. intuition. unfold SF_spec.selected_candidate in H0.
     destruct H0. apply next_ranking_eliminated in Heqo.
-    unfold sf_spec.continuing_ballot in H. intuition.
+    unfold SF_spec.continuing_ballot in H. intuition.
     eapply IHef; eauto.
 Qed.
 
 Lemma increment_same_s : 
 forall c running,
 NoDup (fst (split running)) ->
-exists n, In (c, n + 1) (sf_imp.increment candidate _ running c).
+exists n, In (c, n + 1) (SF_imp.increment candidate _ running c).
 intros. 
 destruct (in_dec rel_dec_p c (fst (split running))).
 apply in_split in i. destruct i.
@@ -849,14 +849,14 @@ Qed.
 
 Lemma tabulate''_first_choices : forall ef cd ct es running r
 (NODUP : NoDup (fst (split running))),
-In (cd, ct) (sf_imp.tabulate'' candidate _ 
-                               (fst (sf_imp.option_split
-                                      (map (sf_imp.next_ranking candidate reldec_candidate r)
+In (cd, ct) (SF_imp.tabulate'' candidate _ 
+                               (fst (SF_imp.option_split
+                                      (map (SF_imp.next_ranking candidate reldec_candidate r)
                                            ef))) running) -> 
-(forall cnd, ~In cnd (fst (split running)) -> sf_spec.first_choices candidate (in_record r) cnd es 0) ->
+(forall cnd, ~In cnd (fst (split running)) -> SF_spec.first_choices candidate (in_record r) cnd es 0) ->
 Forall (fun x => let (cnd, n) := (x: candidate * N) 
-                 in sf_spec.first_choices candidate (in_record r) cnd es (N.to_nat n)) running ->
-sf_spec.first_choices candidate (in_record r) cd (es ++ ef) (N.to_nat ct). 
+                 in SF_spec.first_choices candidate (in_record r) cnd es (N.to_nat n)) running ->
+SF_spec.first_choices candidate (in_record r) cd (es ++ ef) (N.to_nat ct). 
 Proof.
 induction ef; intros.
 - simpl in *. rewrite Forall_forall in *. specialize (H1 _ H). simpl in H1.
@@ -865,9 +865,9 @@ induction ef; intros.
   assert (Permutation (a :: (es ++ ef)) (es ++ a :: ef)). 
   apply Permutation_middle.
   eapply first_choices_perm; eauto. clear H2.
-  destruct (sf_imp.next_ranking candidate reldec_candidate r a) eqn:?.
-  +  destruct p. destruct (sf_imp.option_split
-                     (map (sf_imp.next_ranking candidate reldec_candidate r)
+  destruct (SF_imp.next_ranking candidate reldec_candidate r a) eqn:?.
+  +  destruct p. destruct (SF_imp.option_split
+                     (map (SF_imp.next_ranking candidate reldec_candidate r)
                           ef)) eqn:?. simpl in *. 
      apply next_ranking_selected in Heqo.
      destruct (rel_dec_p c cd). 
@@ -881,7 +881,7 @@ induction ef; intros.
          - assert (exists p', N.to_nat (N.pos p) = S p').
            rewrite Znat.positive_N_nat.
            apply Pnat.Pos2Nat.is_succ. destruct H2. rewrite H2 in *.
-           apply sf_spec.first_choices_selected; auto. 
+           apply SF_spec.first_choices_selected; auto. 
            destruct (in_dec rel_dec_p cd (fst (split running))).
            + rewrite <- (Nnat.Nat2N.id x). eapply IHef; eauto.
              edestruct in_split. apply i.
@@ -922,8 +922,8 @@ induction ef; intros.
                } 
                apply increment_nodup; auto. constructor.
        }
-     * apply sf_spec.first_choices_not_selected. intro.
-       apply n. eapply sf_spec.selected_candidate_unique; eauto.
+     * apply SF_spec.first_choices_not_selected. intro.
+       apply n. eapply SF_spec.selected_candidate_unique; eauto.
        { destruct (in_dec rel_dec_p cd (fst (split running))).
          - copy i. apply in_split in H2. destruct H2.
            eapply IHef; eauto.
@@ -943,22 +943,22 @@ induction ef; intros.
            apply in_split_l in H2. auto.
            auto. auto.
        }
-  + destruct ( sf_imp.option_split
-                 (map (sf_imp.next_ranking candidate reldec_candidate r)
+  + destruct ( SF_imp.option_split
+                 (map (SF_imp.next_ranking candidate reldec_candidate r)
                       ef)) eqn:?.
     simpl in *. 
     apply next_ranking_eliminated in Heqo.
-    apply sf_spec.first_choices_not_selected.
-    intro. unfold sf_spec.selected_candidate in H2.
+    apply SF_spec.first_choices_not_selected.
+    intro. unfold SF_spec.selected_candidate in H2.
     intuition.
     eapply IHef; eauto. rewrite Heqp. simpl. auto.
 Qed.
 
 Lemma tabulate'_first_choices : forall l cd ct  r,
-In (cd, ct) (sf_imp.tabulate' _ _ (fst (sf_imp.option_split
-                                      (map (sf_imp.next_ranking candidate reldec_candidate r)
+In (cd, ct) (SF_imp.tabulate' _ _ (fst (SF_imp.option_split
+                                      (map (SF_imp.next_ranking candidate reldec_candidate r)
                                            l)))) -> 
-sf_spec.first_choices candidate (in_record r) cd (l) (N.to_nat ct). 
+SF_spec.first_choices candidate (in_record r) cd (l) (N.to_nat ct). 
 Proof.
 intros.
 rewrite <- app_nil_l at 1.
@@ -969,24 +969,24 @@ constructor.
 Qed.
 
 Lemma tabulate_correct : forall rec election rs election',
-sf_imp.tabulate candidate _ rec election = (rs, election') ->
+SF_imp.tabulate candidate _ rec election = (rs, election') ->
 Forall (fun (x: (candidate * N)) => let (cd, fc) := x in
-                 sf_spec.first_choices candidate (in_record rec) cd election (N.to_nat fc)) rs.
+                 SF_spec.first_choices candidate (in_record rec) cd election (N.to_nat fc)) rs.
 Proof.
 intros.
-unfold sf_imp.tabulate in H. destruct (sf_imp.option_split
-             (map (sf_imp.next_ranking candidate reldec_candidate rec)
+unfold SF_imp.tabulate in H. destruct (SF_imp.option_split
+             (map (SF_imp.next_ranking candidate reldec_candidate rec)
                 election)) eqn:?.
-assert (PRM := insertion_sort_permutation (sf_imp.tabulate' candidate reldec_candidate l)
-                                          (sf_imp.cnle candidate)).
-rewrite Forall_forall. intros. destruct x. destruct ((sf_imp.insertionsort (sf_imp.cnle candidate)
-         (sf_imp.tabulate' candidate reldec_candidate l),
-      sf_imp.drop_none l0)) eqn:?. inv H.
+assert (PRM := insertion_sort_permutation (SF_imp.tabulate' candidate reldec_candidate l)
+                                          (SF_imp.cnle candidate)).
+rewrite Forall_forall. intros. destruct x. destruct ((SF_imp.insertionsort (SF_imp.cnle candidate)
+         (SF_imp.tabulate' candidate reldec_candidate l),
+      SF_imp.drop_none l0)) eqn:?. inv H.
 inv Heqp0.
 apply Permutation_sym in PRM.
 eapply Permutation_in in PRM; eauto.
-assert (l = fst (sf_imp.option_split
-           (map (sf_imp.next_ranking candidate reldec_candidate rec) election))).
+assert (l = fst (SF_imp.option_split
+           (map (SF_imp.next_ranking candidate reldec_candidate rec) election))).
 rewrite Heqp. auto.  subst.
 clear H0.
 apply tabulate'_first_choices in PRM. auto.
@@ -1007,16 +1007,16 @@ Qed.*)
 
 Lemma tabulate_sorted : 
 forall rec election rs election',
-sf_imp.tabulate _ _ rec election = (rs, election') ->
-Sorted (boolCmpToProp (sf_imp.cnle candidate)) rs.
+SF_imp.tabulate _ _ rec election = (rs, election') ->
+Sorted (boolCmpToProp (SF_imp.cnle candidate)) rs.
 Proof.
 intros.
 intros.
-unfold sf_imp.tabulate in H. destruct (sf_imp.option_split
-             (map (sf_imp.next_ranking candidate reldec_candidate rec)
+unfold SF_imp.tabulate in H. destruct (SF_imp.option_split
+             (map (SF_imp.next_ranking candidate reldec_candidate rec)
                 election)) eqn:?.
 inv H. apply insertion_sort_sorted.
-intros. unfold sf_imp.cnle. destruct b. 
+intros. unfold SF_imp.cnle. destruct b. 
 destruct a. simpl in *. rewrite N.leb_le in *.
 rewrite N.leb_gt in *. apply N.lt_le_incl in H. auto.
 Qed.
@@ -1026,7 +1026,7 @@ Lemma increment_not_eliminated :
 forall vs c rec,
 ~(in_record rec c) ->
 Forall (fun cd =>  ~(in_record rec cd)) (fst (split vs)) ->
-Forall (fun cd => ~(in_record rec cd)) (fst (split (sf_imp.increment candidate _ vs c))).
+Forall (fun cd => ~(in_record rec cd)) (fst (split (SF_imp.increment candidate _ vs c))).
 Proof.
 induction vs; intros.
 - simpl in *. auto.
@@ -1037,7 +1037,7 @@ induction vs; intros.
     simpl in *. intuition. subst. apply reldec_correct_candidate in Heqb.
     subst. intuition.
     specialize (H0 x). intuition.
-  + simpl in *. destruct (split (sf_imp.increment candidate reldec_candidate vs c)) eqn:?.
+  + simpl in *. destruct (split (SF_imp.increment candidate reldec_candidate vs c)) eqn:?.
     simpl in *. intuition.
     * subst. specialize (H0 x). 
       destruct (split vs) eqn:?. simpl in *. intuition.
@@ -1052,9 +1052,9 @@ Qed.
 
 
 Lemma tabulate''_continuing : forall ef cd ct  running r,
-In (cd, ct) (sf_imp.tabulate'' candidate _ 
-                               (fst (sf_imp.option_split
-                                      (map (sf_imp.next_ranking candidate reldec_candidate r)
+In (cd, ct) (SF_imp.tabulate'' candidate _ 
+                               (fst (SF_imp.option_split
+                                      (map (SF_imp.next_ranking candidate reldec_candidate r)
                                            ef))) running) -> 
 Forall (fun x => ~(in_record r x)) (fst (split running)) ->
 ~(in_record r cd). 
@@ -1063,17 +1063,17 @@ induction ef; intros.
 - simpl in *. rewrite Forall_forall in H0.
   specialize (H0 (cd)). intuition. apply H0; auto.
   apply in_split_l in H. simpl in H. auto.
-- simpl in *. destruct ( sf_imp.next_ranking candidate reldec_candidate r a) eqn:?.
+- simpl in *. destruct ( SF_imp.next_ranking candidate reldec_candidate r a) eqn:?.
   + destruct p. apply next_ranking_selected in Heqo.
-    destruct (sf_imp.option_split
-                (map (sf_imp.next_ranking candidate reldec_candidate r)
+    destruct (SF_imp.option_split
+                (map (SF_imp.next_ranking candidate reldec_candidate r)
                      ef)) eqn:?. simpl in *.
-    apply sf_spec.selected_candidate_not_eliminated in Heqo. 
+    apply SF_spec.selected_candidate_not_eliminated in Heqo. 
     eapply increment_not_eliminated in Heqo; eauto. 
     eapply IHef. rewrite Heqp. simpl. eauto.
     auto.
-  + destruct (sf_imp.option_split
-                (map (sf_imp.next_ranking candidate reldec_candidate r)
+  + destruct (SF_imp.option_split
+                (map (SF_imp.next_ranking candidate reldec_candidate r)
                      ef)) eqn:?.
     simpl in *.
     eapply IHef. rewrite Heqp. simpl. eauto.
@@ -1084,23 +1084,23 @@ Lemma tabulate''_first_choices_complete : forall ef cd ct es running r
 (NODUP : NoDup (fst (split running))), 
 (forall cnd cnt, 
 cnt <> 0 ->
-sf_spec.first_choices candidate (in_record r) cnd es (N.to_nat cnt) -> 
+SF_spec.first_choices candidate (in_record r) cnd es (N.to_nat cnt) -> 
 In (cnd, cnt) running) ->
 ct <> 0 -> 
-sf_spec.first_choices candidate (in_record r) cd (es ++ ef) (N.to_nat ct) ->
-In (cd, ct) (sf_imp.tabulate'' candidate _ 
-                               (fst (sf_imp.option_split
-                                      (map (sf_imp.next_ranking candidate reldec_candidate r)
+SF_spec.first_choices candidate (in_record r) cd (es ++ ef) (N.to_nat ct) ->
+In (cd, ct) (SF_imp.tabulate'' candidate _ 
+                               (fst (SF_imp.option_split
+                                      (map (SF_imp.next_ranking candidate reldec_candidate r)
                                            ef))) running). 
 Proof.
 induction ef; intros.
 - simpl in *. rewrite app_nil_r in *. intuition.  
 - simpl in *.
-  destruct (sf_imp.next_ranking candidate reldec_candidate r a) eqn:?.
-  + destruct p. destruct (sf_imp.option_split
-                  (map (sf_imp.next_ranking candidate reldec_candidate r) ef)) eqn:?.
-    assert (l = fst ( sf_imp.option_split
-           (map (sf_imp.next_ranking candidate reldec_candidate r) ef))) by (rewrite Heqp; auto).
+  destruct (SF_imp.next_ranking candidate reldec_candidate r a) eqn:?.
+  + destruct p. destruct (SF_imp.option_split
+                  (map (SF_imp.next_ranking candidate reldec_candidate r) ef)) eqn:?.
+    assert (l = fst ( SF_imp.option_split
+           (map (SF_imp.next_ranking candidate reldec_candidate r) ef))) by (rewrite Heqp; auto).
     subst. simpl. 
     assert (Permutation (es ++ a :: ef) (a :: (es ++ ef))).
     rewrite Permutation_middle. auto.
@@ -1108,7 +1108,7 @@ induction ef; intros.
     clear H2.
     inv H1.
     * apply next_ranking_selected in Heqo; auto.
-       eapply sf_spec.selected_candidate_unique in Heqo; eauto. subst.
+       eapply SF_spec.selected_candidate_unique in Heqo; eauto. subst.
        assert (n' = N.to_nat (N.pred ct)). 
         { clear - H4. rewrite Nnat.N2Nat.inj_pred.
           destruct (N.to_nat ct). congruence. inv H4. simpl. auto.
@@ -1117,12 +1117,12 @@ Admitted.
 
 Lemma tabulate'_first_choices_complete : forall l cd ct r,
 ct <> 0 ->
-sf_spec.first_choices _ (in_record r) cd l (N.to_nat ct) ->
-In (cd, ct) (sf_imp.tabulate' _ _ 
-   (fst (sf_imp.option_split (map (sf_imp.next_ranking _ _ r) l)))).
+SF_spec.first_choices _ (in_record r) cd l (N.to_nat ct) ->
+In (cd, ct) (SF_imp.tabulate' _ _ 
+   (fst (SF_imp.option_split (map (SF_imp.next_ranking _ _ r) l)))).
 Proof.
 intros.
-unfold sf_imp.tabulate'.
+unfold SF_imp.tabulate'.
 rewrite <- (app_nil_l l) in H0.
 eapply tabulate''_first_choices_complete; eauto; try solve [constructor].
 intros. inv H2. assert (cnt = 0). rewrite <- Nnat.Nat2N.inj_iff in H3. 
@@ -1131,16 +1131,16 @@ Qed.
 
 Lemma tabulate_first_choices_complete : forall l cd ct r,
 ct <> 0 -> 
-sf_spec.first_choices _ (in_record r) cd l (N.to_nat ct) ->
-In (cd, ct) (fst (sf_imp.tabulate _ _ r l)). 
+SF_spec.first_choices _ (in_record r) cd l (N.to_nat ct) ->
+In (cd, ct) (fst (SF_imp.tabulate _ _ r l)). 
   intros.
-  unfold sf_imp.tabulate.
-  destruct (sf_imp.option_split
-               (map (sf_imp.next_ranking candidate reldec_candidate r) l)) eqn:?.
+  unfold SF_imp.tabulate.
+  destruct (SF_imp.option_split
+               (map (SF_imp.next_ranking candidate reldec_candidate r) l)) eqn:?.
   eapply Permutation_in.
   apply insertion_sort_permutation.
-  assert (l0 = fst (sf_imp.option_split
-           (map (sf_imp.next_ranking candidate reldec_candidate r) l))).
+  assert (l0 = fst (SF_imp.option_split
+           (map (SF_imp.next_ranking candidate reldec_candidate r) l))).
   rewrite Heqp. auto.
   subst.
   eapply tabulate'_first_choices_complete. auto.
@@ -1148,7 +1148,7 @@ In (cd, ct) (fst (sf_imp.tabulate _ _ r l)).
 Qed.
 
 
-Lemma cnlt_trans : Relations_1.Transitive (boolCmpToProp (sf_imp.cnle candidate)).
+Lemma cnlt_trans : Relations_1.Transitive (boolCmpToProp (SF_imp.cnle candidate)).
 Proof.
 intro. intros.
 destruct x, y, z.
@@ -1163,19 +1163,19 @@ Qed.
 
 
 Lemma tabulate''_participates : forall x election n rec,
-In (x, n) (sf_imp.tabulate'' _ _ (fst (sf_imp.option_split 
-                                        (map (sf_imp.next_ranking candidate reldec_candidate rec) 
+In (x, n) (SF_imp.tabulate'' _ _ (fst (SF_imp.option_split 
+                                        (map (SF_imp.next_ranking candidate reldec_candidate rec) 
                                              election))) nil) ->
-sf_spec.participates candidate x election.
+SF_spec.participates candidate x election.
 Proof.
 induction election; intros.
 - simpl in *. inv H.
 - simpl in *.
-  destruct (sf_imp.next_ranking candidate reldec_candidate rec a) eqn:?.
+  destruct (SF_imp.next_ranking candidate reldec_candidate rec a) eqn:?.
   + destruct p. 
-    destruct ( sf_imp.option_split
+    destruct ( SF_imp.option_split
                  (map
-                    (sf_imp.next_ranking candidate reldec_candidate rec)
+                    (SF_imp.next_ranking candidate reldec_candidate rec)
                     election)) eqn:?.
     simpl in *.
     destruct (rel_dec_p c x).
@@ -1185,19 +1185,19 @@ induction election; intros.
       simpl. auto.
     * apply participates_cons. right.
       eapply IHelection. instantiate (2 := n).
-      assert (fst (sf_imp.option_split
-                     (map (sf_imp.next_ranking candidate reldec_candidate rec) election)) = l).
+      assert (fst (SF_imp.option_split
+                     (map (SF_imp.next_ranking candidate reldec_candidate rec) election)) = l).
       rewrite Heqp; auto. subst.
       eapply tabulate''_same_notin. instantiate (1 := [(c,1)]). 
       repeat constructor. auto. constructor.
       intro. simpl in H0. intuition. auto.
       apply H.
-  + destruct (sf_imp.option_split
+  + destruct (SF_imp.option_split
                      (map
-                        (sf_imp.next_ranking candidate reldec_candidate rec)
+                        (SF_imp.next_ranking candidate reldec_candidate rec)
                         election)) eqn:?.
-    simpl in H. assert (l = (fst (sf_imp.option_split
-           (map (sf_imp.next_ranking candidate reldec_candidate rec) election)))).
+    simpl in H. assert (l = (fst (SF_imp.option_split
+           (map (SF_imp.next_ranking candidate reldec_candidate rec) election)))).
     rewrite Heqp. auto.
     subst.
     apply participates_cons. right.
@@ -1205,15 +1205,15 @@ induction election; intros.
 Qed.
 
 Lemma tabulate_participates : forall x n election rec,
-In (x, n) (fst (sf_imp.tabulate _ _ rec election)) ->
-sf_spec.participates candidate x election.
-intros. unfold sf_imp.tabulate in *.
-destruct (sf_imp.option_split
-                  (map (sf_imp.next_ranking candidate reldec_candidate rec)
+In (x, n) (fst (SF_imp.tabulate _ _ rec election)) ->
+SF_spec.participates candidate x election.
+intros. unfold SF_imp.tabulate in *.
+destruct (SF_imp.option_split
+                  (map (SF_imp.next_ranking candidate reldec_candidate rec)
                      election)) eqn:?.
 simpl in *.
-assert (l = fst (sf_imp.option_split
-           (map (sf_imp.next_ranking candidate reldec_candidate rec) election))).
+assert (l = fst (SF_imp.option_split
+           (map (SF_imp.next_ranking candidate reldec_candidate rec) election))).
 rewrite Heqp. auto.
 subst. clear Heqp. 
 eapply Permutation_in in H.
@@ -1223,14 +1223,14 @@ Qed.
 
 Lemma get_bottom_votes_is_loser :
 forall election rec losers rs election'
-(ELIMO : forall c, sf_spec.participates _ c election -> sf_spec.first_choices _ (in_record rec) c election 0 ->
+(ELIMO : forall c, SF_spec.participates _ c election -> SF_spec.first_choices _ (in_record rec) c election 0 ->
            (in_record rec c)),
-sf_imp.tabulate _ _ rec election = (rs, election') ->
-sf_imp.get_bottom_votes  _ rs = losers ->
-Forall (sf_spec.is_loser candidate (in_record rec) election) losers.
+SF_imp.tabulate _ _ rec election = (rs, election') ->
+SF_imp.get_bottom_votes  _ rs = losers ->
+Forall (SF_spec.is_loser candidate (in_record rec) election) losers.
 Proof.
 intros.
-destruct (sf_imp.tabulate _ _ rec election) eqn:?. inv H.
+destruct (SF_imp.tabulate _ _ rec election) eqn:?. inv H.
 destruct rs. 
 - simpl in *. auto.
 - simpl in *. destruct p. rewrite N.eqb_refl.
@@ -1244,16 +1244,16 @@ destruct rs.
          specialize (CRCT (x, n)). intuition.
          simpl in *. intuition. clear H0.
          inv SRTD.
-         unfold sf_spec.is_loser.
+         unfold SF_spec.is_loser.
          { repeat split.
-           - unfold sf_imp.tabulate in Heqp. unfold
-                                           sf_imp.tabulate' in Heqp.
-             destruct (sf_imp.option_split
-                         (map (sf_imp.next_ranking candidate reldec_candidate rec)
+           - unfold SF_imp.tabulate in Heqp. unfold
+                                           SF_imp.tabulate' in Heqp.
+             destruct (SF_imp.option_split
+                         (map (SF_imp.next_ranking candidate reldec_candidate rec)
                               election)) eqn:?.
              inv Heqp.
-             assert (PRM := insertion_sort_permutation ((sf_imp.tabulate'' candidate reldec_candidate l [])) 
-                                                       (sf_imp.cnle candidate)).
+             assert (PRM := insertion_sort_permutation ((SF_imp.tabulate'' candidate reldec_candidate l [])) 
+                                                       (SF_imp.cnle candidate)).
              eapply Permutation_sym in PRM.
              eapply Permutation_in in PRM.
              instantiate (1 := (x, n)) in PRM.
@@ -1265,10 +1265,10 @@ destruct rs.
              simpl. left. reflexivity.
            - intros.
              assert (N.to_nat n = n0); [ | subst n0 ].
-             { eapply sf_spec.sf_first_choices_unique in H0; [ | apply H1]. auto. }
+             { eapply SF_spec.sf_first_choices_unique in H0; [ | apply H1]. auto. }
              rewrite Forall_forall in H3.
              destruct H.
-             unfold sf_spec.participates in H5.
+             unfold SF_spec.participates in H5.
              destruct H5.
              destruct H5. destruct H6. destruct H6.
              destruct (NPeano.Nat.eq_dec (N.to_nat n) m). 
@@ -1280,7 +1280,7 @@ destruct rs.
                  apply N.leb_le in Heqb.  
                  edestruct (rel_dec_p c' x).
                  subst.
-                 eapply sf_spec.sf_first_choices_unique in H4; [ | apply H1]. intuition.
+                 eapply SF_spec.sf_first_choices_unique in H4; [ | apply H1]. intuition.
                  rewrite <- (Nnat.Nat2N.id m) in H4.
                  apply tabulate_first_choices_complete in H4. 
                  rewrite Heqp in H4. simpl in H4. 
@@ -1299,7 +1299,7 @@ destruct rs.
                  rewrite Znat.N_nat_Z. auto.
                  intro. rewrite H9 in *.
                  eapply ELIMO in H4. auto.
-                 unfold sf_spec.participates.
+                 unfold SF_spec.participates.
                  exists x0.
                  eauto.
                * admit.
@@ -1323,14 +1323,14 @@ destruct rs.
       inv SRTD.
       simpl in *. specialize (CRCT ((x, n))).
       intuition. clear H1.
-      unfold sf_spec.is_loser.
+      unfold SF_spec.is_loser.
       split.
       split.
       rewrite Forall_forall in *.
       admit. (*TODO*)
       admit.
       intros ? ? ? [??] ? ?.
-      eapply sf_spec.sf_first_choices_unique in H5; eauto. subst.
+      eapply SF_spec.sf_first_choices_unique in H5; eauto. subst.
       rewrite Forall_forall in H4.
       specialize (H4 (c', (N.of_nat m))).
       destruct (rel_dec_p c c').
@@ -1339,7 +1339,7 @@ destruct rs.
       rewrite Forall_forall in CRCT.
       specialize (CRCT (c', n)). simpl in CRCT. intuition.
       clear H8.
-      eapply sf_spec.sf_first_choices_unique in H7; eauto.
+      eapply SF_spec.sf_first_choices_unique in H7; eauto.
       subst.
       auto.
       assert (In (c', N.of_nat m) rs).
@@ -1361,7 +1361,7 @@ Qed.
 
 Lemma last_item_in :
 forall l w n,
-sf_imp.last_item candidate l = Some (w,n) ->
+SF_imp.last_item candidate l = Some (w,n) ->
 In (w,n) l.
 Proof.
 induction l; intros.
@@ -1380,25 +1380,25 @@ repeat rewrite Znat.N_nat_Z. intuition.
 Qed.
 
 Lemma tabulate_total_selected : forall r election election' vs,
-sf_imp.tabulate _ _ r election = (vs, election') ->
-sf_spec.total_selected candidate (in_record r) election (length election').
+SF_imp.tabulate _ _ r election = (vs, election') ->
+SF_spec.total_selected candidate (in_record r) election (length election').
 Proof.
-  intros. unfold sf_imp.tabulate in *.
-  destruct (sf_imp.option_split
-             (map (sf_imp.next_ranking candidate reldec_candidate r) election)) eqn:?.
+  intros. unfold SF_imp.tabulate in *.
+  destruct (SF_imp.option_split
+             (map (SF_imp.next_ranking candidate reldec_candidate r) election)) eqn:?.
   simpl in *. inv H.
   generalize dependent l0. 
   revert r  election l.
   induction election; intros.
   -   simpl in *. inv Heqp. constructor.
-  - simpl in *. destruct (sf_imp.next_ranking candidate reldec_candidate r a) eqn:?.
+  - simpl in *. destruct (SF_imp.next_ranking candidate reldec_candidate r a) eqn:?.
     + repeat dlp. 
-      inv Heqp. simpl in *. apply sf_spec.total_continuing.
+      inv Heqp. simpl in *. apply SF_spec.total_continuing.
       apply next_ranking_selected in Heqo. 
-      unfold sf_spec.selected_candidate in *. intuition.
+      unfold SF_spec.selected_candidate in *. intuition.
       eapply IHelection. eauto.
     + dlp. inv Heqp. simpl in *.
-      apply sf_spec.total_exhausted.
+      apply SF_spec.total_exhausted.
       eapply next_ranking_eliminated; eauto.
       eapply IHelection; eauto.
 Qed.
@@ -1406,8 +1406,8 @@ Qed.
 
 Lemma last_item_cons :
 forall h t l,
-sf_imp.last_item candidate (h :: t) = Some l ->
-(t = nil /\ h = l) \/ sf_imp.last_item candidate t = Some l.
+SF_imp.last_item candidate (h :: t) = Some l ->
+(t = nil /\ h = l) \/ SF_imp.last_item candidate t = Some l.
 induction t; intros.  
 - simpl in *. inv H. auto.
 - simpl in *. right.
@@ -1417,8 +1417,8 @@ Qed.
 
 Lemma ss_last :
 forall l c n,
-StronglySorted (boolCmpToProp (sf_imp.cnle candidate)) l ->
-sf_imp.last_item candidate l = Some (c, n) ->
+StronglySorted (boolCmpToProp (SF_imp.cnle candidate)) l ->
+SF_imp.last_item candidate l = Some (c, n) ->
 Forall (fun (r : candidate * N) => let (_, y) := r in y <= n) l.
 Proof.
 induction l; intros.
@@ -1487,35 +1487,35 @@ Qed.
 Lemma run_election'_correct : 
   forall fuel election winner rec' rec tbreak res
          (TB : forall c x, tbreak c = Some x -> In x c) 
-         (N0 : forall c, sf_spec.participates _ c election -> 
-                           sf_spec.first_choices _ (in_record rec) c election 0 ->
+         (N0 : forall c, SF_spec.participates _ c election -> 
+                           SF_spec.first_choices _ (in_record rec) c election 0 ->
                            in_record rec c),
-    sf_imp.run_election' candidate _ tbreak election rec fuel = (Some winner, rec', res) ->
-    sf_spec.winner candidate election (in_record rec) winner.
+    SF_imp.run_election' candidate _ tbreak election rec fuel = (Some winner, rec', res) ->
+    SF_spec.winner candidate election (in_record rec) winner.
 induction fuel; intros.
 - simpl in *. congruence.
-- simpl in *. destruct (sf_imp.tabulate candidate reldec_candidate rec election) eqn:?; 
+- simpl in *. destruct (SF_imp.tabulate candidate reldec_candidate rec election) eqn:?; 
                        simpl in *; try congruence.
-  destruct (sf_imp.last_item candidate l) eqn:?; try congruence.
+  destruct (SF_imp.last_item candidate l) eqn:?; try congruence.
   destruct p.
-  destruct ( sf_imp.gtb_N (n * 2) (N.of_nat (length e))) eqn:?.
+  destruct ( SF_imp.gtb_N (n * 2) (N.of_nat (length e))) eqn:?.
   + inv H.
-    apply sf_spec.winner_now. unfold sf_spec.majority.
+    apply SF_spec.winner_now. unfold SF_spec.majority.
     intros. assert (winner_votes = (N.to_nat n)).
     { apply tabulate_correct in Heqp.
       rewrite Forall_forall in Heqp. specialize (Heqp (winner, n)).
       apply last_item_in in Heqo. intuition.
-      eapply sf_spec.sf_first_choices_unique in H1; eauto. }
+      eapply SF_spec.sf_first_choices_unique in H1; eauto. }
     subst. 
     assert (total_votes = (length e)).
     { apply tabulate_total_selected in Heqp.
       eapply total_selected_unique; eauto. }
     subst. 
-    rewrite sf_imp.gtb_nat_gt in Heqb. rewrite gt_of_nat2 in Heqb.  
+    rewrite SF_imp.gtb_nat_gt in Heqb. rewrite gt_of_nat2 in Heqb.  
     rewrite Nnat.N2Nat.inj_mul in Heqb. auto. 
     apply _.
-  + unfold sf_imp.find_eliminated_noopt in *. 
-    destruct (tbreak (sf_imp.get_bottom_votes candidate l)) eqn:?. 
+  + unfold SF_imp.find_eliminated_noopt in *. 
+    destruct (tbreak (SF_imp.get_bottom_votes candidate l)) eqn:?. 
     * rename c0 into loser.
       rename Heqo0 into TBREAK.
       copy Heqp. rename H0 into ISLOSER.
@@ -1523,12 +1523,12 @@ induction fuel; intros.
       rewrite Forall_forall in ISLOSER.
       eapply TB in TBREAK.
       apply ISLOSER in TBREAK. 
-      { eapply sf_spec.winner_elimination.
-        - unfold sf_spec.no_majority. 
+      { eapply SF_spec.winner_elimination.
+        - unfold SF_spec.no_majority. 
           intro. destruct H0.
-          assert (~ sf_spec.majority _ (in_record rec) election c).
+          assert (~ SF_spec.majority _ (in_record rec) election c).
           { intro.
-            unfold sf_spec.majority in *.
+            unfold SF_spec.majority in *.
             specialize (H1 (length e) (N.to_nat n)).
             copy Heqp.
             apply tabulate_total_selected in H2. intuition. 
@@ -1539,7 +1539,7 @@ induction fuel; intros.
             change 2%nat with (N.to_nat 2) in H4.
             rewrite <- Nnat.N2Nat.inj_mul in H4.
             rewrite <- gt_of_nat2 in H4.
-            rewrite <- sf_imp.gtb_nat_gt in H4. congruence.
+            rewrite <- SF_imp.gtb_nat_gt in H4. congruence.
             apply _.
           }
           copy Heqp. 
@@ -1555,9 +1555,9 @@ induction fuel; intros.
           { apply last_item_in in Heqo.
             apply tabulate_correct in H2.
             rewrite Forall_forall in H2. eapply H2 in Heqo; clear H2.
-            eapply sf_spec.sf_first_choices_unique; eauto. }  
+            eapply SF_spec.sf_first_choices_unique; eauto. }  
           subst.
-          unfold sf_spec.majority in H0.
+          unfold SF_spec.majority in H0.
           copy FCX.
           destruct (NNatex x0).
           rewrite <- H4 in H3.
@@ -1569,7 +1569,7 @@ induction fuel; intros.
           subst. intro. subst. intuition.
         - eauto.
         - rewrite update_eliminated_in_rec_eq_noc.
-          destruct (sf_imp.run_election' candidate reldec_candidate tbreak election
+          destruct (SF_imp.run_election' candidate reldec_candidate tbreak election
                                          ([loser] :: rec) fuel) eqn:REQN. destruct p.
           eapply IHfuel.
           + eauto.
@@ -1608,8 +1608,8 @@ NoDup allc ->
             (filter
                (fun x : candidate * N =>
                 let (_, ct) := x in  ct =? 0)
-               (sf_imp.tabulate'' candidate reldec_candidate l
-                  (sf_imp.increment candidate reldec_candidate
+               (SF_imp.tabulate'' candidate reldec_candidate l
+                  (SF_imp.increment candidate reldec_candidate
                      (map (fun x : candidate => (x, 0)) allc) c)))).
 Proof.
 intros. intro.
@@ -1625,7 +1625,7 @@ Qed.
 Lemma tabulate_0_running :
 forall (c: candidate) l running
 (NODUP: NoDup (fst (split (running)))), 
-In (c, 0) (sf_imp.tabulate'' _ _ l running) ->
+In (c, 0) (SF_imp.tabulate'' _ _ l running) ->
 In (c, 0) running.
 Proof.
 induction l. 
@@ -1648,25 +1648,25 @@ Qed.
 
 Lemma find_0s_correct : 
 forall allc election c
-(PART: forall c, sf_spec.participates _ c election -> In c allc),
+(PART: forall c, SF_spec.participates _ c election -> In c allc),
 NoDup allc ->
-In c (sf_imp.find_0s candidate reldec_candidate allc election) ->
-sf_spec.first_choices _ (in_record nil) c election 0.
+In c (SF_imp.find_0s candidate reldec_candidate allc election) ->
+SF_spec.first_choices _ (in_record nil) c election 0.
 Proof.
-intros. (*destruct (classic (sf_spec.participates _ c election)). rename H1 into PTCPT.*)
+intros. (*destruct (classic (SF_spec.participates _ c election)). rename H1 into PTCPT.*)
 induction election; intros.
 - constructor.
-- unfold sf_imp.find_0s in *. simpl in *. 
-  destruct (sf_imp.next_ranking candidate reldec_candidate [] a) eqn:?.
-  + destruct p. destruct (sf_imp.option_split
-                            (map (sf_imp.next_ranking candidate reldec_candidate [])
+- unfold SF_imp.find_0s in *. simpl in *. 
+  destruct (SF_imp.next_ranking candidate reldec_candidate [] a) eqn:?.
+  + destruct p. destruct (SF_imp.option_split
+                            (map (SF_imp.next_ranking candidate reldec_candidate [])
                                  election)) eqn:?.
     simpl in *. destruct (rel_dec_p c0 c). 
     * subst.
       eapply nodup_not_in_filter in H. exfalso. apply H. apply H0.
-    * apply sf_spec.first_choices_not_selected. 
+    * apply SF_spec.first_choices_not_selected. 
       intro. apply next_ranking_selected in Heqo.
-      eapply sf_spec.selected_candidate_unique in Heqo; eauto.
+      eapply SF_spec.selected_candidate_unique in Heqo; eauto.
       apply IHelection; eauto. intros. apply PART.
       apply participates_cons. auto.
       apply in_map_iff.
@@ -1674,7 +1674,7 @@ induction election; intros.
       exists x. destruct x. simpl in H0. subst. intuition.
       apply filter_In in H1. apply filter_In. intuition.
       { destruct (classic (In (c, n0)
-                            (sf_imp.tabulate'' candidate reldec_candidate l
+                            (SF_imp.tabulate'' candidate reldec_candidate l
                                                (map (fun x : candidate => (x, 0)) allc)))).
         - eapply tabulate''_same; [ | | | | exact H0]. apply increment_nodup.
           + apply no_dup_map_allc. auto. 
@@ -1704,33 +1704,33 @@ induction election; intros.
             apply in_map_iff in H0; intuition_nosplit; auto.
             apply increment_nodup. apply no_dup_map_allc. auto.
       }
-  + destruct (sf_imp.option_split
-                    (map (sf_imp.next_ranking candidate reldec_candidate [])
+  + destruct (SF_imp.option_split
+                    (map (SF_imp.next_ranking candidate reldec_candidate [])
                        election)) eqn:?.
     simpl in *.
     apply IHelection in H0; auto.
-    * constructor. intro. unfold sf_spec.selected_candidate in H1.
+    * constructor. intro. unfold SF_spec.selected_candidate in H1.
       intuition_nosplit. apply next_ranking_eliminated in Heqo.
-      unfold sf_spec.continuing_ballot in *. intuition.
+      unfold SF_spec.continuing_ballot in *. intuition.
       auto.
     * intros. apply PART. apply participates_cons; auto.
 Qed.
 
 Lemma find_0s_complete :
   forall election allc c,
- sf_spec.first_choices candidate
-     (in_record [sf_imp.find_0s candidate reldec_candidate allc election]) c
+ SF_spec.first_choices candidate
+     (in_record [SF_imp.find_0s candidate reldec_candidate allc election]) c
      election 0 ->
-   sf_spec.participates candidate c election ->
-   In c (sf_imp.find_0s candidate reldec_candidate allc election).
+   SF_spec.participates candidate c election ->
+   In c (SF_imp.find_0s candidate reldec_candidate allc election).
 Admitted. (*might be hard, can it be worded better?*)
   
 Theorem run_election_correct : forall election winner tb rec allc res
   (TB : forall c x, tb c = Some x -> In x c)
-  (PART : forall c, sf_spec.participates _ c election <-> In c allc) 
+  (PART : forall c, SF_spec.participates _ c election <-> In c allc) 
   (NODUP : NoDup allc),  
-    sf_imp.run_election candidate _ tb election allc = (Some winner, rec, res) ->
-    sf_spec.winner _ election (in_record []) winner.
+    SF_imp.run_election candidate _ tb election allc = (Some winner, rec, res) ->
+    SF_spec.winner _ election (in_record []) winner.
 intros. unfold sf_imp.run_election in H. 
 apply run_election'_correct in H; auto.
 - eapply winner_eliminate_0s in H; auto. admit.

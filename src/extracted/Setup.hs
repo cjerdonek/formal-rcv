@@ -21,7 +21,7 @@ doConf args f = do
        putStrLn "Extracting implementation from Coq sources" 
        bracket_ (setCurrentDirectory "ext")
                 (setCurrentDirectory "..")
-                (rawSystemExit v coqc ["-I", "../..", "sf_extract.v"])
+                (rawSystemExit v coqc ["-I", "../..", "SF_extract.v"])
      Nothing -> do
        putStrLn "Warning! 'coqc' not found, not extracting from Coq sources" 
    preConf simpleUserHooks args f

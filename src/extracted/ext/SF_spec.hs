@@ -1,4 +1,4 @@
-module Sf_spec where
+module SF_spec where
 
 import qualified Prelude
 

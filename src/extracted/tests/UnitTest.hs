@@ -7,7 +7,7 @@ import Test.Tasty.Ingredients
 import Test.Tasty.Runners.AntXML
 import Test.Tasty.QuickCheck
 
-import Sf_tests
+import SF_tests
 
 #if !MIN_VERSION_base(4,8,0)
 import Data.Functor

@@ -1,4 +1,4 @@
-Require Import sf_spec.
+Require Import SF_spec.
 Require Import RelDec.
 Require Import List.
 Require Import Sorting.
@@ -295,4 +295,4 @@ Extract Inductive sumor   => "Prelude.Maybe" ["Prelude.Just" "Prelude.Nothing"].
 
 
 
-Extraction "extracted/ext/sf_imp.hs" run_election.
+Extraction "extracted/sf_imp.hs" run_election.

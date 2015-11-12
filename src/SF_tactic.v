@@ -1,5 +1,5 @@
-Require sf_imp.
-Require sf_spec.
+Require SF_imp.
+Require SF_spec.
 Require Import RelDec.
 Require Import List.
 Require Import Sorted.
@@ -9,7 +9,7 @@ Require Import Classical.
 Import ListNotations.
 
 
-Definition in_record {candidate} (rec : sf_imp.record candidate) (c : candidate) :=
+Definition in_record {candidate} (rec : SF_imp.record candidate) (c : candidate) :=
 exists e, In e rec /\ In c e.
 
 Hint Rewrite Forall_forall : rcv.
@@ -22,19 +22,19 @@ Hint Rewrite <- @neg_rel_dec_correct : rcv.
 Ltac arw := try autorewrite with rcv in *.
 
 
-Ltac unfold_defs := cbv [sf_imp.no_viable_candidates sf_spec.no_viable_candidates
-                         sf_imp.eliminated sf_imp.no_viable_candidates_selection
-                        in_record sf_spec.overvote sf_spec.properly_selects
-                        sf_spec.does_not_select eq_dec sf_spec.selected_candidate
-                        sf_spec.continuing_ballot sf_spec.exhausted_ballot
-                        sf_spec.selected_candidate].
+Ltac unfold_defs := cbv [SF_imp.no_viable_candidates SF_spec.no_viable_candidates
+                         SF_imp.eliminated SF_imp.no_viable_candidates_selection
+                        in_record SF_spec.overvote SF_spec.properly_selects
+                        SF_spec.does_not_select eq_dec SF_spec.selected_candidate
+                        SF_spec.continuing_ballot SF_spec.exhausted_ballot
+                        SF_spec.selected_candidate].
 
-Ltac unfold_defs_star := cbv [sf_imp.no_viable_candidates sf_spec.no_viable_candidates
-                         sf_imp.eliminated sf_imp.no_viable_candidates_selection in_record 
-                         sf_spec.overvote sf_spec.properly_selects
-                         sf_spec.does_not_select eq_dec sf_spec.selected_candidate
-                         sf_spec.continuing_ballot sf_spec.exhausted_ballot
-                         sf_spec.selected_candidate] in *.
+Ltac unfold_defs_star := cbv [SF_imp.no_viable_candidates SF_spec.no_viable_candidates
+                         SF_imp.eliminated SF_imp.no_viable_candidates_selection in_record 
+                         SF_spec.overvote SF_spec.properly_selects
+                         SF_spec.does_not_select eq_dec SF_spec.selected_candidate
+                         SF_spec.continuing_ballot SF_spec.exhausted_ballot
+                         SF_spec.selected_candidate] in *.
 
 
 Tactic Notation "unfold_defs" "in" "*" := unfold_defs_star.
@@ -127,15 +127,15 @@ match goal with
 | [ H : (_, _) = (_, _) |- _] => inv H
 | [ H : Some _ = Some _ |- _] => inv H
 | [ |- ~_ ] => intro
-| [ H :  sf_spec.next_ranking _ _ [] _ |- _ ] => inv H
+| [ H :  SF_spec.next_ranking _ _ [] _ |- _ ] => inv H
 | [ H : exists _, _ |- _ ] => destruct H
 end.
 
 Ltac unique :=
 repeat match goal with
-| [ H : sf_spec.next_ranking _ _ _ ?x, H' : sf_spec.next_ranking _ _ _ ?y |- _ ] =>
+| [ H : SF_spec.next_ranking _ _ _ ?x, H' : SF_spec.next_ranking _ _ _ ?y |- _ ] =>
   first [ assert (x = y) as Trash by auto ; clear Trash | 
-          extend (sf_spec.next_ranking_unique _ _ _ _ _ H H')]
+          extend (SF_spec.next_ranking_unique _ _ _ _ _ H H')]
 end.
 
 Ltac destruct_ifs :=
