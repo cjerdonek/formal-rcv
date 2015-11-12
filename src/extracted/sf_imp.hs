@@ -1531,11 +1531,11 @@ last_item votes =
      (:) y l -> last_item t}}
 
 run_election' :: (RelDec a1) -> (([] a1) -> Prelude.Maybe a1) -> (Election
-                 a1) -> (Record a1) -> Nat -> (,) (Prelude.Maybe a1)
-                 (Record a1)
+                 a1) -> (Record a1) -> Nat -> (,)
+                 ((,) (Prelude.Maybe a1) (Record a1)) ([] ([] ((,) a1 N)))
 run_election' reldec_candidate break_tie elect rec fuel =
   case fuel of {
-   O -> (,) Prelude.Nothing rec;
+   O -> (,) ((,) Prelude.Nothing rec) [];
    S n' ->
     case tabulate reldec_candidate rec elect of {
      (,) ranks elect' ->
@@ -1545,13 +1545,15 @@ run_election' reldec_candidate break_tie elect rec fuel =
         case p of {
          (,) cand1 cand1_votes ->
           case gtb_N (mul0 cand1_votes (Npos (XO XH))) win_threshhold of {
-           Prelude.True -> (,) (Prelude.Just cand1) rec;
+           Prelude.True -> (,) ((,) (Prelude.Just cand1) rec) ((:) ranks []);
            Prelude.False ->
             case find_eliminated_noopt break_tie ranks of {
              Prelude.Just el ->
-              run_election' reldec_candidate break_tie elect ((:) el rec) n';
-             Prelude.Nothing -> (,) Prelude.Nothing rec}}};
-       Prelude.Nothing -> (,) Prelude.Nothing rec}}}
+              case run_election' reldec_candidate break_tie elect ((:) el
+                     rec) n' of {
+               (,) p0 t -> (,) p0 ((:) ranks t)};
+             Prelude.Nothing -> (,) ((,) Prelude.Nothing rec) []}}};
+       Prelude.Nothing -> (,) ((,) Prelude.Nothing rec) []}}}
 
 find_0s :: (RelDec a1) -> ([] a1) -> (Election a1) -> [] a1
 find_0s reldec_candidate all_candidates el =
@@ -1566,61 +1568,9 @@ find_0s reldec_candidate all_candidates el =
          (,) x1 ct -> eqb0 ct N0}) counts)}
 
 run_election :: (RelDec a1) -> (([] a1) -> Prelude.Maybe a1) -> ([]
-                (Ballot0 a1)) -> ([] a1) -> (,) (Prelude.Maybe a1)
-                (Record a1)
+                (Ballot0 a1)) -> ([] a1) -> (,)
+                ((,) (Prelude.Maybe a1) (Record a1)) ([] ([] ((,) a1 N)))
 run_election reldec_candidate break_tie elect all_candidates =
   run_election' reldec_candidate break_tie elect ((:)
     (find_0s reldec_candidate all_candidates elect) []) (length elect)
-
-type T1 = Prelude.Int
-
-prop_drop_none_keeps :: ([] (Prelude.Maybe T1)) -> T1 -> Prelude.Bool
-prop_drop_none_keeps l i =
-  (Prelude.==) (existsb ((Prelude.==) (Prelude.Just i)) l)
-    (existsb ((Prelude.==) i) (drop_none l))
-
-prop_next_ranking_contains :: (Record T1) -> (Ballot0 T1) -> Prelude.Bool
-prop_next_ranking_contains rec bal =
-  case next_ranking (Prelude.==) rec bal of {
-   Prelude.Just p ->
-    case p of {
-     (,) c b -> existsb (existsb ((Prelude.==) c)) bal};
-   Prelude.Nothing -> Prelude.True}
-
-prop_next_ranking_not_eliminated :: (Record T1) -> (Ballot0 T1) ->
-                                    Prelude.Bool
-prop_next_ranking_not_eliminated rec bal =
-  case next_ranking (Prelude.==) rec bal of {
-   Prelude.Just p ->
-    case p of {
-     (,) c b -> negb (eliminated (Prelude.==) rec c)};
-   Prelude.Nothing -> Prelude.True}
-
-is_overvote :: (Record T1) -> (Ballot0 T1) -> Prelude.Bool
-is_overvote rec b =
-  case b of {
-   [] -> Prelude.False;
-   (:) r t ->
-    case r of {
-     [] -> is_overvote rec t;
-     (:) h l ->
-      case forallb (eq_dec1 (Prelude.==) h) l of {
-       Prelude.True -> Prelude.False;
-       Prelude.False -> Prelude.True}}}
-
-prop_next_ranking_not_overvote :: (Record T1) -> (Ballot0 T1) -> Prelude.Bool
-prop_next_ranking_not_overvote rec bal =
-  case next_ranking (Prelude.==) rec bal of {
-   Prelude.Just p -> negb (is_overvote rec bal);
-   Prelude.Nothing -> Prelude.True}
-
-all_props :: (,)
-             ((,)
-             ((,) (([] (Prelude.Maybe T1)) -> T1 -> Prelude.Bool)
-             ((Record T1) -> (Ballot0 T1) -> Prelude.Bool))
-             ((Record T1) -> (Ballot0 T1) -> Prelude.Bool))
-             ((Record T1) -> (Ballot0 T1) -> Prelude.Bool)
-all_props =
-  (,) ((,) ((,) prop_drop_none_keeps prop_next_ranking_contains)
-    prop_next_ranking_not_eliminated) prop_next_ranking_not_overvote
 
