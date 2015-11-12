@@ -4,22 +4,40 @@
 name:                sfImp
 version:             0.1.0.0
 synopsis:            Extracted formalization of San Francisco ranked choice voting
--- description:         
+-- description:
 homepage:            https://github.com/cjerdonek/formal-rcv
--- license:             
+-- license:
 license-file:        ../../LICENSE
 author:              Joey Dodds
 maintainer:          jdodds@galois.com
--- copyright:           
--- category:            
-build-type:          Simple
--- extra-source-files:  
+build-type:          Custom
 cabal-version:       >=1.10
 
 library
-  -- exposed-modules:     
-  -- other-modules:       
-  -- other-extensions:    
-  build-depends:       base >=4.7 && <4.8
-  -- hs-source-dirs:      
+  exposed-modules:
+    List
+    Datatypes
+    Bool
+    RelDec
+    Sf_spec
+    Sf_imp
+  build-depends:       base >=4.7 && <5.0
+  hs-source-dirs: ext
   default-language:    Haskell2010
+
+test-suite sfTests
+  type: exitcode-stdio-1.0
+  hs-source-dirs: ext, tests
+  default-language:    Haskell2010
+
+  main-is: UnitTest.hs
+  other-modules:
+    Sf_tests
+
+  build-depends:
+    base >= 4.7,
+    sfImp,
+    tasty,
+    tasty-ant-xml,
+    tasty-quickcheck,
+    tasty-hunit
