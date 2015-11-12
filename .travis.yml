@@ -2,8 +2,13 @@ language: haskell
 ghc: 7.8
 before_install:
   - sudo apt-get update -qq
-  - sudo apt-get install coq -qq
-  - "cd src/extracted"
+  - sudo apt-get install ocaml ocaml-native-compilers camlp5 
+  - wget https://coq.inria.fr/distrib/V8.4pl6/files/coq-8.4pl6.tar.gz
+  - tar -xzf coq-8.4pl6.tar.gz
+  - cd coq-8.4pl6
+  - ./configure -prefix /usr/local
+  - make && sudo make install -qq
+  - "cd ../src/extracted"
 install:
   - "cabal install --only-dependencies --enable-tests --reorder-goals"
 script:
