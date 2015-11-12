@@ -1084,7 +1084,8 @@ Lemma tabulate''_first_choices_complete : forall ef cd ct es running r
 (NODUP : NoDup (fst (split running))), 
 (forall cnd cnt, 
 cnt <> 0 ->
-sf_spec.first_choices candidate (in_record r) cnd es (N.to_nat cnt) -> In (cnd, cnt) running) ->
+sf_spec.first_choices candidate (in_record r) cnd es (N.to_nat cnt) -> 
+In (cnd, cnt) running) ->
 ct <> 0 -> 
 sf_spec.first_choices candidate (in_record r) cd (es ++ ef) (N.to_nat ct) ->
 In (cd, ct) (sf_imp.tabulate'' candidate _ 
@@ -1484,12 +1485,12 @@ Qed.
           
 
 Lemma run_election'_correct : 
-  forall fuel election winner rec' rec tbreak
+  forall fuel election winner rec' rec tbreak res
          (TB : forall c x, tbreak c = Some x -> In x c) 
          (N0 : forall c, sf_spec.participates _ c election -> 
                            sf_spec.first_choices _ (in_record rec) c election 0 ->
                            in_record rec c),
-    sf_imp.run_election' candidate _ tbreak election rec fuel = (Some winner, rec') ->
+    sf_imp.run_election' candidate _ tbreak election rec fuel = (Some winner, rec', res) ->
     sf_spec.winner candidate election (in_record rec) winner.
 induction fuel; intros.
 - simpl in *. congruence.
@@ -1568,6 +1569,8 @@ induction fuel; intros.
           subst. intro. subst. intuition.
         - eauto.
         - rewrite update_eliminated_in_rec_eq_noc.
+          destruct (sf_imp.run_election' candidate reldec_candidate tbreak election
+                                         ([loser] :: rec) fuel) eqn:REQN. destruct p.
           eapply IHfuel.
           + eauto.
           + intros. edestruct (rel_dec_p c0 loser).
@@ -1576,9 +1579,8 @@ induction fuel; intros.
             * apply N0 in H0. unfold in_record in *. 
               destruct H0.
               exists x. intuition.
-              clear - H1 n0.
-              eapply first_choices_rec_0; eauto.
-          + apply H.
+              eapply first_choices_rec_0; eauto. 
+          + inv H. rewrite REQN.  auto. 
       }
     * congruence.
 Qed.
@@ -1723,11 +1725,11 @@ Lemma find_0s_complete :
    In c (sf_imp.find_0s candidate reldec_candidate allc election).
 Admitted. (*might be hard, can it be worded better?*)
   
-Theorem run_election_correct : forall election winner tb rec allc
+Theorem run_election_correct : forall election winner tb rec allc res
   (TB : forall c x, tb c = Some x -> In x c)
   (PART : forall c, sf_spec.participates _ c election <-> In c allc) 
   (NODUP : NoDup allc),  
-    sf_imp.run_election candidate _ tb election allc = (Some winner, rec) ->
+    sf_imp.run_election candidate _ tb election allc = (Some winner, rec, res) ->
     sf_spec.winner _ election (in_record []) winner.
 intros. unfold sf_imp.run_election in H. 
 apply run_election'_correct in H; auto.

@@ -177,7 +177,7 @@ match votes with
 | h :: t => last_item t
 end.
 
-Fixpoint run_election' (elect : election) (rec : record) (fuel : nat) :  (option candidate * record) :=
+Fixpoint run_election' (elect : election) (rec : record) (fuel : nat) :  (option candidate * record * list (list (candidate * N))) :=
 match fuel with
 | S n' => let (ranks, elect') := (tabulate rec elect) in
           let win_threshhold := N.of_nat (length elect')  in 
@@ -185,17 +185,18 @@ match fuel with
           match last_item ranks with
           | Some (cand1, cand1_votes)  => 
             if (gtb_N (cand1_votes * 2) (win_threshhold)) then
-              (Some cand1, rec)
+              (Some cand1, rec, ranks::nil)
             else
               match (find_eliminated_noopt ranks) with 
               | Some el =>
-                run_election' elect(*' hopefully just an optimization...*)
-                              (el :: rec) n'
-              | None => (None, rec)
+                match (run_election' elect (el :: rec) n') with
+                | (c, r, t) => (c, r, ranks :: t)
+                end 
+              | None => (None, rec, nil)
               end
-          | None => (None, rec)
+          | None => (None, rec, nil)
           end
-| _ => (None, rec)
+| _ => (None, rec, nil)
 end.
 
 Definition find_0s (all_candidates : list candidate) (el : election) :=
