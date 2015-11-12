@@ -1,5 +1,5 @@
-Require Import sf_imp.
-Require Import sf_tests.
+Require Import SF_imp.
+Require Import SF_tests.
 Require Import RelDec.
 Require Import List.
 Import ListNotations.
@@ -29,6 +29,4 @@ Extract Constant T => "Prelude.Int".
 Extract Inlined Constant eqb_t => "(Prelude.==)".
 Extract Inlined Constant reldec_t => "(Prelude.==)".
 
-(*Extraction "extracted/tests/sf_imp_tests.hs" all_props.*)
-
-Separate Extraction sf_tests.
+Separate Extraction SF_tests.

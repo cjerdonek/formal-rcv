@@ -1,12 +1,12 @@
-module Sf_imp where
+module SF_imp where
 
 import qualified Prelude
 import qualified List
 import qualified RelDec
-import qualified Sf_spec
+import qualified SF_spec
 
 
-type Coq_ballot candidate = Sf_spec.Coq_ballot candidate
+type Coq_ballot candidate = SF_spec.Coq_ballot candidate
 
 type Coq_record candidate = [] ([] candidate)
 

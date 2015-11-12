@@ -1,4 +1,4 @@
-Require Import sf_spec.
+Require Import SF_spec.
 Require Import RelDec.
 Require Import List.
 Require Import Sorting.
@@ -263,36 +263,3 @@ match l with
 | _ => None
 end.
 
-
-(*
-Extract Inductive bool => bool [ true false ].
-Extract Inductive option => option [ Some None ].
-Extract Inductive unit => unit [ "()" ].
-Extract Inductive list => list [ "[]" "( :: )" ].
-Extract Inductive prod => "( * )" [ "" ].
-Extract Inductive sumbool => bool [ true false ].
-Extract Inductive sumor => option [ Some None ].
-
-
-Extraction "sf_imp.ml" run_election. *)
-
-Extraction Language Haskell.
-
-Unset Extraction KeepSingleton.
-Set Extraction AutoInline.
-Set Extraction Optimize.
-Set Extraction AccessOpaque.
-
-Extract Inductive unit    => "()" [ "()" ].
-Extract Inductive bool    => "Prelude.Bool" ["Prelude.True" "Prelude.False"].
-Extract Inductive sumbool => "Prelude.Bool" ["Prelude.True" "Prelude.False"].
-Extract Inductive sum     => "Prelude.Either" [ "Prelude.Left" "Prelude.Right" ].
-Extract Inductive list    => "[]" ["[]" "(:)"].
-Extract Inductive prod    => "(,)" ["(,)"].
-Extract Inductive sigT    => "(,)" ["(,)"].
-Extract Inductive option  => "Prelude.Maybe" ["Prelude.Just" "Prelude.Nothing"].
-Extract Inductive sumor   => "Prelude.Maybe" ["Prelude.Just" "Prelude.Nothing"].
-
-
-
-Extraction "extracted/sf_imp.hs" run_election.
