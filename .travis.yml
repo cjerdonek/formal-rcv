@@ -1,7 +1,6 @@
 language: haskell
 ghc: 7.8
 before_install:
-  - sudo wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sh -s /usr/local/bin/ -qq
   - opam repo add coq-released https://coq.inria.fr/opam/released
   - opam install coq.8.4.5
   - "cd ../src/extracted"
