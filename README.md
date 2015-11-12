@@ -1,4 +1,4 @@
-Formal RCV
+Formal RCV   
 ==========
 
 The purpose of this project is to make available formal specifications of
@@ -15,6 +15,11 @@ The project will use [Coq][coq] for the formalization.
 This work will inform the work of IEEE's Voting System Standards Committee
 (VSSC) Working Group [1622.6][vssc_1622_6], "Voting Methods Mathematical
 Models."
+
+
+Build status: [![Build Status](https://travis-ci.org/cjerdonek/formal-rcv.svg?branch=master)](https://travis-ci.org/cjerdonek/formal-rcv)
+
+A note about the build status: it is not currently completely continuous, and an improper commit might cause it to fall behind. It is only correct if [the extracted implementation](https://github.com/cjerdonek/formal-rcv/blob/master/src/extracted/ext/SF_imp.hs) is as new as [the Coq implementation](https://github.com/cjerdonek/formal-rcv/blob/master/src/SF_imp.v). We are still considering fixes to this problem
 
 
 Contents
