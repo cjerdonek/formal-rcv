@@ -29,4 +29,4 @@ Extract Constant T => "Prelude.Int".
 Extract Inlined Constant eqb_t => "(Prelude.==)".
 Extract Inlined Constant reldec_t => "(Prelude.==)".
 
-Separate Extraction SF_tests.
+Separate Extraction SF_imp SF_tests.
