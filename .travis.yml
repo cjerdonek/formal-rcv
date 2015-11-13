@@ -6,7 +6,7 @@ before_install:
   - opam init -a -y
   - eval $(opam config env)
   - opam repo add coq-released https://coq.inria.fr/opam/released
-  - opam install coq.8.4.5 --verbose -y
+  - opam install coq.8.4.5 --verbose -y -j4
   - cd src
   - make
   - cd extracted
