@@ -50,8 +50,3 @@ match (next_ranking T _ rec bal) with
 | _ => true
 end.
 
-Definition all_props :=
-(prop_drop_none_keeps,
-prop_next_ranking_contains,
-prop_next_ranking_not_eliminated,
-prop_next_ranking_not_overvote).
