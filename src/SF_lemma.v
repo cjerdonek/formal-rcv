@@ -830,7 +830,54 @@ In a election ->
 SF_spec.next_ranking candidate (in_record [l]) a x ->
 SF_spec.next_ranking candidate (in_record [c::l]) a x.
 Proof.
-Admitted.
+  intros c l a x election.
+  remember (in_record [l]) as P.
+  intros H H1 H2.
+  assert( SF_spec.overvote _ x \/ ~In c x ).
+  { subst P.
+    destruct (classic (SF_spec.overvote _ x)); auto. right.
+    intro.
+    induction election.
+    elim H1.
+    rewrite first_choices_0_cons in H. destruct H.
+    simpl in H1. destruct H1; auto.
+    subst a0.
+    inversion H; clear H; subst.
+    apply H6.
+    split.
+    intro.
+    destruct H; auto.
+    elim H.
+    exists x. auto.
+    destruct H as [q [??]].
+    assert (x = q).
+    eapply SF_spec.next_ranking_unique; eauto. subst q.
+    auto.
+    exists x; split; auto.
+  }
+  clear H H1.
+
+  induction H2.
+  * apply SF_spec.next_ranking_eliminated; auto.
+    rewrite Forall_forall; intros.
+    rewrite Forall_forall in H.
+    rewrite HeqP in H.
+    apply H in H3.
+    destruct H3 as [q [??]].
+    simpl in H3.
+    destruct H3 as [?|[]]. subst q.
+    exists (c::l). simpl; auto.
+  * apply SF_spec.next_ranking_valid with c0; auto.
+    intuition.
+    right. intro.
+    destruct H0 as [q [??]].
+    simpl in H0. intuition. subst q.
+    simpl in H3. destruct H3.
+    subst c0. auto.
+    apply H2.
+    rewrite HeqP.
+    exists l. split; simpl; auto.
+Qed.
 
 Lemma total_selected_remove_0 :
 forall election c l t,
@@ -855,13 +902,42 @@ eapply IHelection; eauto.
 inv H. auto.
 Qed.
 
+Lemma selected_candidate_remove_0 :
+  forall l c a x election,
+  SF_spec.first_choices candidate (in_record [l]) c election 0 ->
+  SF_spec.selected_candidate candidate (in_record [c :: l]) a x ->
+  SF_spec.selected_candidate candidate (in_record [l]) a x.
+Proof.
+Admitted.
+
+
+Lemma selected_candidate_add_0 :
+  forall l c a x election,
+  SF_spec.first_choices candidate (in_record [l]) c election 0 ->
+  SF_spec.selected_candidate candidate (in_record [l]) a x ->
+  SF_spec.selected_candidate candidate (in_record [c :: l]) a x.
+
+Proof.
+Admitted.
+
 Lemma first_choices_remove_0 :
   forall l c x election winner_votes,
   SF_spec.first_choices candidate (in_record [l]) c election 0 ->
-  SF_spec.first_choices candidate (in_record [c :: l]) x election
-                        winner_votes ->
+  SF_spec.first_choices candidate (in_record [c :: l]) x election winner_votes ->
   SF_spec.first_choices candidate (in_record [l]) x election winner_votes.
-Admitted.
+Proof.
+  intros l c x. induction election; intros.
+  * inversion H0. apply SF_spec.first_choices_nil.
+  * rewrite first_choices_0_cons in H. destruct H.
+    inversion H; clear H; subst. clear H6.
+    inversion H0; clear H0; subst.
+    + apply SF_spec.first_choices_selected; auto.
+      eapply selected_candidate_remove_0; eauto.
+    + apply SF_spec.first_choices_not_selected; auto.
+      intro. apply H3.
+      eapply selected_candidate_add_0; auto.
+      apply H1.
+Qed.
 
 Lemma no_majority_remove_0 :
 forall  l election c,
