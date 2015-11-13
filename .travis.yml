@@ -13,4 +13,4 @@ before_install:
 install:
   - cabal install --only-dependencies --enable-tests --reorder-goals
 script:
-  - cabal configure --enable-tests && cabal build && cabal test --show-details=streaming
+  - cabal configure --enable-tests && cabal build && cabal test --show-details=always
