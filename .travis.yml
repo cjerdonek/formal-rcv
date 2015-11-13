@@ -6,8 +6,10 @@ before_install:
   - opam init -a -y
   - opam repo add coq-released https://coq.inria.fr/opam/released
   - opam install coq.8.4.5 -y
-  - "cd ../src/extracted"
+  - cd src
+  - make
+  - cd extracted
 install:
-  - "cabal install --only-dependencies --enable-tests --reorder-goals"
+  - cabal install --only-dependencies --enable-tests --reorder-goals
 script:
-  - "cabal configure --enable-tests && cabal build && cabal test"
+  - cabal configure --enable-tests && cabal build && cabal test
