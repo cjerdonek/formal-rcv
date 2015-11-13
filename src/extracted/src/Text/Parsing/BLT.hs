@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 module Text.Parsing.BLT
 ( Election(..)
 , Ballot(..)
@@ -6,6 +8,10 @@ module Text.Parsing.BLT
 , getElection
 , getElectionFromFile
 ) where
+
+#if !MIN_VERSION_base(4,8,0)
+import Data.Functor
+#endif
 
 import System.IO
 import Text.Parsec
