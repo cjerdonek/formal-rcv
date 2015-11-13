@@ -276,6 +276,7 @@ Extract Inductive sumor => option [ Some None ].
 
 Extraction "sf_imp.ml" run_election. *)
 
+(*
 Extraction Language Haskell.
 
 Unset Extraction KeepSingleton.
@@ -296,3 +297,4 @@ Extract Inductive sumor   => "Prelude.Maybe" ["Prelude.Just" "Prelude.Nothing"].
 
 
 Extraction "extracted/sf_imp.hs" run_election.
+*)

@@ -290,6 +290,20 @@ candidate shall be declared elected.*)
         + exists (S x). apply total_continuing; auto.
     Qed.
 
+    Lemma total_selected_unique : forall e v v',
+      total_selected e v ->
+      total_selected e v' ->
+      v= v'.
+    Proof.
+      intros.
+      revert v v' H H0.
+      induction e; intros.
+      * inversion H; inversion H0; auto.
+      * inversion H; inversion H0; subst; auto.
+        elim H3; auto.
+        elim H8; auto.
+    Qed.
+
     Definition majority (e : election) (winner : candidate) :=
       forall total_votes winner_votes, 
         total_selected e total_votes ->
