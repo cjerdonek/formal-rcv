@@ -1509,7 +1509,7 @@ induction fuel; intros.
     subst. 
     assert (total_votes = (length e)).
     { apply tabulate_total_selected in Heqp.
-      eapply total_selected_unique; eauto. }
+      eapply SF_spec.total_selected_unique; eauto. }
     subst. 
     rewrite SF_imp.gtb_nat_gt in Heqb. rewrite gt_of_nat2 in Heqb.  
     rewrite Nnat.N2Nat.inj_mul in Heqb. auto. 
@@ -1604,7 +1604,7 @@ Lemma nodup_not_in_filter :
 forall allc c l,
 NoDup allc ->
 ~ In c
-         (map fst
+         (map (@fst _ _)
             (filter
                (fun x : candidate * N =>
                 let (_, ct) := x in  ct =? 0)
@@ -1731,7 +1731,7 @@ Theorem run_election_correct : forall election winner tb rec allc res
   (NODUP : NoDup allc),  
     SF_imp.run_election candidate _ tb election allc = (Some winner, rec, res) ->
     SF_spec.winner _ election (in_record []) winner.
-intros. unfold sf_imp.run_election in H. 
+intros. unfold SF_imp.run_election in H.
 apply run_election'_correct in H; auto.
 - eapply winner_eliminate_0s in H; auto. admit.
   intros. eapply find_0s_correct. intros. apply PART. auto.  auto.

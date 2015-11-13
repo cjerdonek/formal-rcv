@@ -170,11 +170,6 @@ split.
      exists x0; auto.
 Qed.
 
-Lemma total_selected_unique : forall r e v v',
-SF_spec.total_selected candidate r e v ->
-SF_spec.total_selected candidate r e v' ->
-v= v'.
-Admitted.
 
 Lemma majority_not_0 :
 forall r e x ,
@@ -834,6 +829,7 @@ SF_spec.first_choices candidate (in_record [l]) c election 0 ->
 In a election ->
 SF_spec.next_ranking candidate (in_record [l]) a x ->
 SF_spec.next_ranking candidate (in_record [c::l]) a x.
+Proof.
 Admitted.
 
 Lemma total_selected_remove_0 :
