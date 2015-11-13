@@ -1731,7 +1731,7 @@ Theorem run_election_correct : forall election winner tb rec allc res
   (NODUP : NoDup allc),  
     SF_imp.run_election candidate _ tb election allc = (Some winner, rec, res) ->
     SF_spec.winner _ election (in_record []) winner.
-intros. unfold sf_imp.run_election in H. 
+intros. unfold SF_imp.run_election in H. 
 apply run_election'_correct in H; auto.
 - eapply winner_eliminate_0s in H; auto. admit.
   intros. eapply find_0s_correct. intros. apply PART. auto.  auto.
