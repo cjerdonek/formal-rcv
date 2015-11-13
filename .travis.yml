@@ -8,7 +8,7 @@ before_install:
   - opam repo add coq-released https://coq.inria.fr/opam/released
   - opam install coq.8.4.5 --verbose -y -j4
   - cd src
-  - make
+  - make SF_tests.vo
   - cd extracted
 install:
   - cabal install --only-dependencies --enable-tests --reorder-goals
