@@ -5,7 +5,7 @@ before_install:
   - sudo apt-get install ocaml ocaml-native-compilers camlp5 -qq
   - opam init -a -y
   - opam repo add coq-released https://coq.inria.fr/opam/released
-  - opam install coq.8.4.5
+  - opam install coq.8.4.5 -y
   - "cd ../src/extracted"
 install:
   - "cabal install --only-dependencies --enable-tests --reorder-goals"
