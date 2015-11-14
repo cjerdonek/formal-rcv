@@ -31,10 +31,16 @@ library
     SF_tests
     Specif
     Text.Parsing.BLT
+    Text.Parsing.OpenRCVTests
 
   build-depends:
     base >=4.7 && <5.0,
-    parsec >= 3.1.6 && < 4
+    parsec >= 3.1.6 && < 4,
+    bytestring >= 0.10.0.0 && < 0.11,
+    containers >= 0.5 && < 0.6,
+    text >= 1.2 && < 1.3,
+    vector >= 0.11 && < 0.12,
+    aeson >= 0.10.0.0 && < 0.11
 
   hs-source-dirs: ext, src
   default-language:    Haskell2010
@@ -49,6 +55,23 @@ test-suite sfTests
   build-depends:
     base >= 4.7,
     parsec,
+    random,
+    sfImp,
+    tasty,
+    tasty-ant-xml,
+    tasty-quickcheck,
+    tasty-hunit
+
+test-suite rcvTests
+  type: exitcode-stdio-1.0
+  hs-source-dirs: tests
+  default-language:    Haskell2010
+
+  main-is: RCVUnitTest.hs
+
+  build-depends:
+    base >= 4.7,
+    bytestring,
     random,
     sfImp,
     tasty,
