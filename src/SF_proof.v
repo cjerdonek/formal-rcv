@@ -1604,7 +1604,7 @@ Lemma nodup_not_in_filter :
 forall allc c l,
 NoDup allc ->
 ~ In c
-         (map fst
+         (map (@fst _ _)
             (filter
                (fun x : candidate * N =>
                 let (_, ct) := x in  ct =? 0)

@@ -94,9 +94,7 @@ Definition insertionsort {A} (cmp : A-> A -> bool) (l : list A) := insertionsort
 Definition election := list ballot.
 
 
-(** Here we count the number of votes for each candidate, returning a sorted
-    list of (candidate, number of votes). It also returns an election, where any
-    exhausted ballots are removed. *)
+
 Fixpoint option_split {A B : Type} (l : list (option (A * B))) :=
 match l with
 | nil => (nil, nil)
@@ -104,6 +102,9 @@ match l with
 | None :: t => let (l1, l2) := option_split t in ((None :: l1), ( None :: l2))
 end.
 
+(** Here we count the number of votes for each candidate, returning a sorted
+    list of (candidate, number of votes). It also returns an election, where any
+    exhausted ballots are removed. *)
 Definition tabulate (rec : record) (elect : election) : ((list (candidate * N) * election)) :=
 let get_candidates := (map (next_ranking rec) elect) in
 let (next_ranks, next_election) := option_split (get_candidates) in
@@ -128,7 +129,7 @@ destruct ( a <=? b) eqn:?; intuition; try discriminate.
  - rewrite N.leb_gt in Heqb0. clear H. apply N.gt_lt_iff. auto.
 Qed.
 
-
+(* assumes a list sorted by votes *)
 Definition get_bottom_votes (votes : list (candidate * N)) :=
 match votes with
 | (c, v) :: t => map (@fst _ _) (filter (fun (x : candidate * N) => let (_, v') := x in 
@@ -138,6 +139,7 @@ end.
 
 Variable break_tie : list candidate -> option candidate.
 
+(*
 (* This expects a list of candidates sorted ascending in number of votes *)
 Fixpoint find_eliminated' (eliminated : list candidate) (votes : list (candidate * N)) (sum : N) :=
   match votes with
@@ -163,6 +165,7 @@ Fixpoint find_eliminated' (eliminated : list candidate) (votes : list (candidate
 
 Definition find_eliminated votes :=
   find_eliminated' [] votes 0.
+*)
 
 Definition find_eliminated_noopt votes :=
   match break_tie (get_bottom_votes votes) with

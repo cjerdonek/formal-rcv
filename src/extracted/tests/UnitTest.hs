@@ -24,6 +24,35 @@ import Text.Parsing.BLT
 import Data.Functor
 #endif
 
+int2Pos :: Int -> BinNums.Coq_positive
+int2Pos 1 = BinNums.Coq_xH
+int2Pos x = if (x `mod` 2 == 1)
+          then BinNums.Coq_xI (int2Pos (x `div` 2))
+          else BinNums.Coq_xO (int2Pos (x `div` 2))
+
+int2N :: Int -> BinNums.N
+int2N x
+  | x <= 0    = BinNums.N0
+  | otherwise = BinNums.Npos (int2Pos x) 
+
+pos2int :: BinNums.Coq_positive -> Int
+pos2int x = pos2int' x 1 where
+  pos2int' (BinNums.Coq_xI h) c =  c + (pos2int' h c*2)
+  pos2int' (BinNums.Coq_xO h) c = (pos2int' h c*2)
+  pos2int' _ c = c
+
+n2int :: BinNums.N -> Int
+n2int (BinNums.N0) = 0
+n2int (BinNums.Npos p) = pos2int p
+
+instance Show BinNums.N where
+  show x= show (n2int x) 
+
+instance Arbitrary BinNums.N where
+  arbitrary = do
+    arbN <- ((suchThat (arbitrarySizedIntegral) ((<=) 0)))
+    return  (int2N arbN)
+  
 main :: IO ()
 main = tests >>= defaultMainWithIngredients ingrs
 
@@ -40,6 +69,10 @@ tests = localOption (QuickCheckTests 10000) . testGroup "SF Tests" <$> sequence
   , return $ testProperty "next_ranking_contains" prop_next_ranking_contains
   , return $ testProperty "next_ranking_not_eliminated" prop_next_ranking_not_eliminated
   , return $ testProperty "next_ranking_not_overvote" prop_next_ranking_not_overvote
+  , return $ testProperty "increment_get" prop_increment_get
+  , return $ testProperty "count_tabulate''" prop_count_tabulate''
+  , return $ testProperty "option_split" prop_option_split
+  , return $ testProperty "get_bottom_votes_correct" prop_get_bottom_votes_correct
   , test_SF2012_D5
   , test_SF2011_Sheriff
   , test_SF2011_Mayor
