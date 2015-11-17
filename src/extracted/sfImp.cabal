@@ -89,12 +89,13 @@ executable rcv_testcase
   build-depends:
     base >= 4.7,
     simple-get-opt >= 0.1 && < 0.2,
-    filepath,
+    aeson,
     bytestring,
     containers,
     directory,
+    filepath,
+    process,
     text,
     vector,
-    aeson,
     sfImp
   ghc-options: -Wall

@@ -2,9 +2,11 @@
 module Main where
 
 import SimpleGetOpt
-import System.Exit      (exitFailure)
 import System.Directory (doesFileExist)
+import System.Exit      (exitFailure, exitSuccess, ExitCode(..))
+import System.FilePath  ((</>))
 import System.IO
+import System.Process
 
 import Control.Monad (when, unless)
 
@@ -18,6 +20,7 @@ data Config =
     , confTests     :: FilePath
     , confTestCase  :: Int
     , confVerbose   :: Bool
+    , confExe       :: [String]
     } deriving (Show)
 
 defaultConfig :: Config
@@ -26,14 +29,15 @@ defaultConfig = Config
   , confTests     = "irv.json"
   , confTestCase  = 1
   , confVerbose   = False
+  , confExe       = []
   }
 
 
 opts :: OptSpec Config
 opts = OptSpec
   { progDefaults = defaultConfig
-  , progParamDocs = []
-  , progParams    = \_ _ -> Left "Invalid parameter"
+  , progParamDocs = [("EXE","executable under test")]
+  , progParams    = \p s -> Right s { confExe = confExe s ++ [p] }
   , progOptions =
       [ Option ['c'] ["constants"]
         "JSON file containing \"candidate_name\" constants"
@@ -43,6 +47,12 @@ opts = OptSpec
         "JSON file containing \"test_cases\""
         $ ReqArg "FILE" $ \f s -> Right s { confTests = f }
 
+      , Option ['p'] ["rcv-path"]
+        "Path to open-rcv-tests repository"
+        $ ReqArg "PATH" $ \f s -> Right s
+            { confConstants = f </> "tests/constants.json"
+            , confTests = f </> "tests/irv.json"
+            }
       , Option ['a'] ["case"]
         "Test case index"
         $ ReqArg "INT" $ \a s -> case reads a of
@@ -62,15 +72,51 @@ main = do
 
 run :: Config -> IO ()
 run c = do
-  when (confVerbose c) $ print c
+  verbose $ print c
   c_file <- getBSContents "constants" (confConstants c)
   candidates <- catchParseErr "constants" (getCandidates c_file)
 
   t_file <- getBSContents "tests" (confTests c)
   test <- catchParseErr "tests" (getTestCase (confTestCase c) t_file)
 
-  print candidates
-  print test
+  verbose $ print candidates
+  verbose $ print test
+
+  let input = testInput candidates test
+  verbose $ putStrLn "Test input:" >> putStrLn input
+
+  output <- execSubprocess c input
+
+  verbose $ putStrLn "Test output:" >> putStrLn output
+
+  let r = testOutput test output
+
+  case r of
+    TestResultMatch -> do
+      verbose $ putStrLn "PASS: Test matched expected output."
+    TestResultMismatch s -> do
+      verbose $ putStrLn "FAIL: Test did not match expected output."
+      hPutStrLn stderr s
+      exitFailure
+
+  exitSuccess
+  where
+  verbose = when (confVerbose c)
+
+execSubprocess :: Config -> String -> IO String
+execSubprocess conf input = do
+  when (null e) $ hPutStrLn stderr notest >> exitFailure
+  (exitcode, output, err) <- readProcessWithExitCode cmd args input
+  unless (null err) $ hPutStr stderr err
+  case exitcode of
+    ExitSuccess -> return output
+    ExitFailure n -> hPutStrLn stderr (childfail n) >> exitFailure
+  where
+  e = confExe conf
+  cmd = head e
+  args = tail e
+  notest = "Fatal: no executable under test given"
+  childfail n = "Fatal: child process exited with error code " ++ show n
 
 catchParseErr :: (Show a) => String -> Either String a -> IO a
 catchParseErr _ (Right a) = return a
