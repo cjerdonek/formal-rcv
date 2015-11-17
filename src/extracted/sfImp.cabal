@@ -31,6 +31,7 @@ library
     SF_tests
     Specif
     Text.Parsing.BLT
+    Text.Parsing.OpenRCVJSON
     Text.Parsing.OpenRCVTests
 
   build-depends:
@@ -87,9 +88,13 @@ executable rcv_testcase
 
   build-depends:
     base >= 4.7,
+    simple-get-opt >= 0.1 && < 0.2,
+    filepath,
     bytestring,
     containers,
+    directory,
     text,
     vector,
     aeson,
     sfImp
+  ghc-options: -Wall
