@@ -23,9 +23,12 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.HashMap.Strict as H
 import Data.Vector (Vector)
 import qualified Data.Vector as Vec
-import Data.Text (Text, unpack)
+import Data.Scientific (toBoundedInteger)
+import Data.Text (Text)
+import qualified Data.Text as T (unpack)
 
 import Data.Aeson
 import Data.Aeson.Types
@@ -100,11 +103,15 @@ data TestResult
 testOutput :: TestCase -> String -> TestResult
 testOutput tc o = case decode (BC.pack o) of
   Nothing -> TestResultMismatch "test output is not valid JSON"
-  Just v  -> match v
-  where
-  match :: Value -> TestResult
-  match v = TestResultMismatch (BC.unpack (encode (tcOutput tc)))
-
+  Just v  -> case parseOutput v of
+    Left err -> TestResultMismatch
+      ("test output is not a valid election result: " ++ err)
+    Right output_res -> case parseOutput (tcOutput tc) of
+      Left err -> TestResultMismatch
+        ("test case expected output is not a valid election result: " ++ err)
+      Right output_expected -> case output_res == output_expected of
+        False -> TestResultMismatch ("test output does not match expected output")
+        True -> TestResultMatch
 
 data ElectionResult =
   ElectionResult
@@ -113,9 +120,46 @@ data ElectionResult =
 
 data ElectionRound =
   ElectionRound
-    { erElected :: Set String
-    , erTotals  :: Map String Int
+    { erElected :: Set Text
+    , erTotals  :: Map Text Int
     } deriving (Eq,Show)
 
 parseOutput :: Object -> Either String ElectionResult
-parseOutput = undefined
+parseOutput output = parseEither aux output
+  where
+  aux o = do
+    rs <- o .: "rounds"
+    erRounds <- mapM parseRound rs
+    return ElectionResult{..}
+
+parseRound :: Value -> Parser ElectionRound
+parseRound v = withObject "round" aux v
+  where
+  aux o = do
+    e <- o .: "elected"
+    erElected <- parseElected e
+    t <- o .: "totals"
+    erTotals  <- parseTotals t
+    return ElectionRound{..}
+
+
+parseElected :: Array -> Parser (Set Text)
+parseElected a = do
+  -- Let it be known: this is the first time I have ever written Haskell that
+  -- would benefit from the Foldable/Traversable proposal
+  es <- mapM (withText "elected" return) (Vec.toList a)
+  return (Set.fromList es)
+
+parseTotals :: Object -> Parser (Map Text Int)
+parseTotals o = do
+  vs <- mapM parseTotal (H.toList o)
+  return (Map.fromList vs)
+  where
+  parseTotal (k,v) = do
+    votes <- withScientific "vote count" (parseInt k) v
+    return (k, votes)
+  parseInt k s = case toBoundedInteger s of
+    Just i -> return i
+    Nothing -> fail ("Vote count of " ++ show s ++ " for "
+                  ++ T.unpack k ++ " is not an integer.")
+
