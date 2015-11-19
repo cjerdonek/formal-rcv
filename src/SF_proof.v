@@ -1,6 +1,8 @@
 Require SF_imp.
 Require SF_spec.
 Require Import SF_lemma.
+Require Import SF_properties.
+Require Import SF_opt.
 Require Import RelDec.
 Require Import List.
 Require Import Sorted.
@@ -1083,9 +1085,9 @@ Qed.
 Lemma tabulate''_first_choices_complete : forall ef cd ct es running r
 (NODUP : NoDup (fst (split running))), 
 (forall cnd cnt, 
-cnt <> 0 ->
-SF_spec.first_choices candidate (in_record r) cnd es (N.to_nat cnt) -> 
-In (cnd, cnt) running) ->
+   cnt <> 0 ->
+   SF_spec.first_choices candidate (in_record r) cnd es (N.to_nat cnt) -> 
+   In (cnd, cnt) running) ->
 ct <> 0 -> 
 SF_spec.first_choices candidate (in_record r) cd (es ++ ef) (N.to_nat ct) ->
 In (cd, ct) (SF_imp.tabulate'' candidate _ 
@@ -1718,13 +1720,177 @@ Qed.
 
 Lemma find_0s_complete :
   forall election allc c,
- SF_spec.first_choices candidate
-     (in_record [SF_imp.find_0s candidate reldec_candidate allc election]) c
-     election 0 ->
+   SF_spec.first_choices candidate (in_record []) c election 0 ->
    SF_spec.participates candidate c election ->
    In c (SF_imp.find_0s candidate reldec_candidate allc election).
-Admitted. (*might be hard, can it be worded better?*)
+Admitted.
+
+Lemma split_fst (A B:Type) (l:list (A*B)):
+  map (@fst A B) l = fst (split l).
+Proof.
+  induction l; simpl; auto.
+  destruct a; simpl.
+  destruct (split l); simpl in *.
+  f_equal; auto.
+Qed.  
+
+Lemma find_0s_nodup :
+  forall allc e,
+    NoDup allc ->
+    NoDup (SF_imp.find_0s candidate reldec_candidate allc e).
+Proof.
+  intros.
+  unfold SF_imp.find_0s. 
+  case_eq (SF_imp.option_split
+            (map (SF_imp.next_ranking candidate reldec_candidate []) e)).
+  intros a b Hab.
+  rewrite split_fst.
+  assert (NoDup (fst (split (map (fun x : candidate => (x, 0)) allc)))).
+  { replace (fst (split (map (fun x : candidate => (x, 0)) allc))) with allc; auto.
+    clear. induction allc; simpl; auto.
+    destruct (split (map (fun x => (x,0)) allc)); simpl in *.
+    f_equal; auto.
+  }
+  generalize (tabulate_nodup a (map (fun x => (x,0)) allc) H0).
+  generalize (SF_imp.tabulate'' candidate reldec_candidate a
+              (map (fun x : candidate => (x, 0)) allc)).
+  generalize (fun x : candidate * N => let (_, ct) := x in ct =? 0).
+  intro f. induction l; simpl; intros; auto.
+  destruct a0; simpl in *.
+  case_eq (split l); intros.
+  rewrite H2 in H1.
+  rewrite H2 in IHl.
+  simpl in *.
+  inv H1.
+  case_eq (f (c,n)); intros.
+  simpl.
+  case_eq (split (filter f l)); simpl; intros.
+  constructor; auto.
+  { intro. apply H5.
+    clear -H3 H2 H4.
+    revert l0 l1 l2 l3 H2 H3 H4.
+    induction l; simpl; intros; auto.
+    inv H2. inv H3. auto.
+    destruct a; simpl in *.
+    case_eq (split l); intros.
+    rewrite H in H2.
+    inv H2.
+    case_eq (split (filter f l)); intros.
+    generalize (IHl l4 l5 l0 l1 H H0); intros.
+    destruct (f (c0,n)). simpl in *.
+    rewrite H0 in H3.
+    inv H3.
+    simpl in H4; intuition.
+    rewrite H3 in H0.
+    inv H0.
+    simpl; intuition.
+  }
+  rewrite H3 in IHl.
+  simpl in IHl.
+  apply IHl; auto.
+  apply IHl; auto.
+Qed.
   
+Lemma find_0s_subset :
+  forall allc l e,
+    NoDup allc ->
+    In l (SF_imp.find_0s candidate reldec_candidate allc e) ->
+    In l allc.
+Proof.
+  intros.
+  unfold SF_imp.find_0s in H0.
+  cut (In (l,0) (map (fun x => (x,0)) allc)).
+  { clear. induction allc; simpl; intuition.
+    inv H0. auto.
+  }
+  destruct (SF_imp.option_split
+                (map (SF_imp.next_ranking candidate reldec_candidate []) e)).  
+  eapply tabulate_0_running.
+  { replace (fst (split (map (fun x : candidate => (x, 0)) allc))) with allc; auto.
+    clear.
+    rewrite <- split_fst.
+    rewrite map_map.
+    simpl.
+    symmetry. apply map_id.
+  }
+  rewrite in_map_iff in H0.
+  destruct H0 as [x [??]].
+  destruct x. simpl in *.
+  subst c.
+  rewrite filter_In in H1. destruct H1.
+  rewrite N.eqb_eq in H1. subst n.
+  apply H0.
+Qed.  
+
+Lemma count_votes_nonzero :
+  forall P e n,
+    (n > 0)%nat->
+    Ranked_properties.count_votes candidate P e n ->
+    exists b, In b e /\ P b.
+Proof.
+  induction e; intros.
+  * inv H0. omega.
+  * inv H0.
+    exists a. split; simpl; auto.
+    destruct (IHe n) as [b [??]]; auto.
+    exists b; split; simpl; auto.
+Qed.
+
+Lemma count_votes_find_0s :
+  forall allc election
+  (NODUP : NoDup allc)
+  (PART : forall c, SF_spec.participates _ c election <-> In c allc) ,
+   Ranked_properties.count_votes candidate
+     (fun b : list (list candidate) =>
+      exists c : candidate,
+        SF_spec.selected_candidate candidate (in_record []) b c /\
+        In c (SF_imp.find_0s candidate reldec_candidate allc election))
+     election 0.
+Proof.
+  intros.
+  destruct (count_votes_total _ (fun b : list (list candidate) =>
+      exists c : candidate,
+        SF_spec.selected_candidate candidate (in_record []) b c /\
+        In c (SF_imp.find_0s candidate reldec_candidate allc election))
+     election) as [n ?].
+  destruct n; auto.
+  elimtype False.
+  assert (exists b, In b election /\
+      exists c : candidate,
+        SF_spec.selected_candidate candidate (in_record []) b c /\
+        In c (SF_imp.find_0s candidate reldec_candidate allc election)).
+  { apply count_votes_nonzero in H. auto. omega. }
+  destruct H0 as [b [? [c [??]]]].
+  assert (SF_spec.first_choices candidate (in_record []) c election 0).
+  apply (find_0s_correct allc election c); auto.
+  intros. rewrite <- PART; auto.
+  clear -H1 H0 H3.
+  induction election.
+  * elim H0.
+  * apply first_choices_0_cons in H3. destruct H3.
+    hnf in H0. destruct H0; auto.
+    subst a.
+    inv H.
+    contradiction.
+Qed.
+
+Lemma winner_viable :
+  forall elim election c,
+    SF_spec.winner candidate election elim c ->
+    SF_spec.viable_candidate candidate elim election c.
+Proof.
+  intros. induction H.
+  destruct (majority_not_0 _ eliminated election winning_candidate) as [v [??]]; auto.
+  destruct (nonzero_first_choices_selected _ eliminated winning_candidate election v) as [b [??]]; auto.
+  omega.
+  split.
+  eapply SF_spec.selected_candidate_not_eliminated; eauto.
+  eapply selected_participates; eauto.
+  destruct IHwinner; split; auto.
+  intro. apply H2.
+  hnf. auto.
+Qed.
+
 Theorem run_election_correct : forall election winner tb rec allc res
   (TB : forall c x, tb c = Some x -> In x c)
   (PART : forall c, SF_spec.participates _ c election <-> In c allc) 
@@ -1733,13 +1899,55 @@ Theorem run_election_correct : forall election winner tb rec allc res
     SF_spec.winner _ election (in_record []) winner.
 intros. unfold SF_imp.run_election in H. 
 apply run_election'_correct in H; auto.
-- eapply winner_eliminate_0s in H; auto. admit.
-  intros. eapply find_0s_correct. intros. apply PART. auto.  auto.
-  destruct H0. intuition. inv H1. auto. inv H0.
+- rewrite -> sf_spec_optimization with
+     (SF_imp.find_0s _ reldec_candidate allc election) 0%nat; auto. apply H.
+  + apply find_0s_nodup; auto.
+  + intros. split.
+    unfold in_record. intros [e [??]]. elim H1.
+    rewrite PART.
+    apply find_0s_subset in H0; auto.
+  + apply count_votes_find_0s; auto.
+  + exists winner.
+    apply winner_viable in H.
+    destruct H; split; auto.
+    intro.
+    apply H.
+    hnf. eexists.
+    split. simpl; auto. auto.
+    split; auto.
+    intros [q [??]]. elim H1.
+  + intros. destruct count; auto with arith.
+    elim H0. clear H0.
+    apply find_0s_complete; auto.
+    destruct H1; auto.
+  + unfold in_record. firstorder. subst x0. auto.
 - intros. 
   eexists. simpl. split. left. reflexivity.
   apply find_0s_complete; auto. 
-Qed. 
+  destruct (SF_spec.sf_first_choices_total _ (in_record []) election c).
+  destruct x; auto.
+  cut (S x <= 0)%nat. omega.
+  eapply first_choices_monotone.
+  2: eauto. 2: eauto.
+  intro.
+  hnf in H3.
+  destruct H3 as [q [??]].
+  hnf in H3. destruct H3. 2: elim H3.
+  subst q.
+  assert (SF_spec.first_choices _ (in_record []) c election 0).
+  apply (find_0s_correct allc election c); auto.
+  intros. rewrite <- PART. auto.
+  assert( 0 = S x)%nat.
+  eapply SF_spec.sf_first_choices_unique; eauto.
+  inv H5.
+  intros.
+  hnf in H3.
+  destruct H3 as [q[??]].
+  elim H3.
+Qed.
 
 
 End cand.
+
+Check run_election_correct.
+Print Assumptions run_election_correct.
