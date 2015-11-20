@@ -114,19 +114,25 @@ Qed.
 
 Lemma exhausted_ballot_monotone :
   forall (candidate:Set) (elim elim':candidate -> Prop) b,
-    (forall x, elim x -> elim' x) ->
+    (forall x, (exists r, In r b /\ In x r) -> elim x -> elim' x) ->
     SF_spec.exhausted_ballot candidate elim b ->
     SF_spec.exhausted_ballot candidate elim' b.
 Proof.
-  unfold exhausted_ballot. firstorder.
+  unfold exhausted_ballot. intuition.
   left. intros [r ?].
-  induction H1.
+  induction H0.
   destruct (classic (Forall elim r')).
   apply IHnext_ranking.
   intros.
-  apply (H0 x).
+  apply (H x); auto.
+  { destruct H5 as [r0 [??]]. exists r0. split; simpl; auto. }
+  intro.
+  apply H1.
+  destruct H5 as [r0 ?].
+  exists r0.
   apply SF_spec.next_ranking_eliminated; auto.
-  apply (H0 r').
+  elim H1.
+  exists r'.
   destruct r'.
   elim H4.
   rewrite Forall_forall.
@@ -141,25 +147,32 @@ Proof.
   elim H2.
   exists x. exists c.
   simpl; intuition.
-  apply (H0 r).
+  apply H1. exists r.
   apply SF_spec.next_ranking_valid with c; auto.
   intuition.
-  right. exists x. split; auto.
+  right. intro.
+  apply H3; auto.
+  apply H; auto.
+  exists r; split; simpl; auto. 
+  destruct H1 as [r [??]].
+  right. exists r. split; auto.
   induction H0.
   apply SF_spec.next_ranking_eliminated; auto.
   rewrite Forall_forall. intros.
   apply H.
+  exists r'; split; simpl; auto.
   rewrite Forall_forall in H0; auto.
+  apply IHnext_ranking.
+  intros. apply H; auto.
+  destruct H4 as [r0 [??]].
+  exists r0; split; simpl; auto.
+  auto.
   apply SF_spec.next_ranking_valid with c; auto.
-  intuition.
-  left.
-  red; eauto.
-  red; eauto.
 Qed.
 
 Lemma total_selected_elim_eq :
   forall candidate elim elim' e n,
-    (forall x, elim x <-> elim' x) ->
+    (forall x, participates _ x e -> (elim x <-> elim' x)) ->
     SF_spec.total_selected candidate elim e n ->
     SF_spec.total_selected candidate elim' e n.
 Proof.
@@ -170,14 +183,24 @@ Proof.
     intro. apply H0.
     eapply exhausted_ballot_monotone. 2: eauto.
     intros. rewrite H; auto.
+    hnf; simpl; eauto.
+    apply IHtotal_selected.
+    intros. apply H.
+    destruct H2 as [q [??]].
+    exists q; split; simpl; auto.
   * apply total_exhausted; auto.
     eapply exhausted_ballot_monotone. 2: eauto.
     intros. rewrite <- H; auto.
+    hnf; simpl; eauto.
+    apply IHtotal_selected.
+    intros. apply H.
+    destruct H2 as [q [??]].
+    hnf; simpl; eauto.
 Qed.
 
 Lemma next_ranking_elim_eq :
   forall candidate elim elim' b r,
-    (forall x, elim x <-> elim' x) ->
+    (forall x, (exists r, In r b /\ In x r) -> (elim x <-> elim' x)) ->
     SF_spec.next_ranking candidate elim b r ->
     SF_spec.next_ranking candidate elim' b r.
 Proof.
@@ -186,15 +209,22 @@ Proof.
     rewrite Forall_forall; intros.
     rewrite <- H.
     rewrite Forall_forall in H0. auto.
+    simpl; eauto.
+    apply IHnext_ranking; auto.
+    intros.
+    apply H.
+    destruct H3 as [r0 [??]].
+    simpl; eauto.
   * apply next_ranking_valid with c; intuition.
     right.
     rewrite <- H. auto.
+    simpl; eauto.
 Qed.
 
 
 Lemma selected_candidate_elim_eq :
   forall candidate elim elim' b c,
-    (forall x, elim x <-> elim' x) ->
+    (forall x, (exists r, In r b /\ In x r) -> (elim x <-> elim' x)) ->
     SF_spec.selected_candidate candidate elim b c ->
     SF_spec.selected_candidate candidate elim' b c.
 Proof.
@@ -211,7 +241,7 @@ Qed.
 
 Lemma first_choices_elim_eq :
   forall candidate elim elim' e c n,
-    (forall x, elim x <-> elim' x) ->
+    (forall x, SF_spec.participates _ x e -> (elim x <-> elim' x)) ->
     SF_spec.first_choices candidate elim c e n ->
     SF_spec.first_choices candidate elim' c e n.
 Proof.
@@ -220,16 +250,26 @@ Proof.
   * apply first_choices_nil.
   * apply first_choices_selected; auto.
     eapply selected_candidate_elim_eq. 2: eauto.
-    auto.
+    intros; apply H.
+    hnf; simpl; eauto.
+    apply IHfirst_choices.
+    intros. apply H.
+    destruct H2 as [q [??]].
+    exists q; simpl; eauto.
   * eapply first_choices_not_selected; auto.
     intro. apply H0.
     eapply selected_candidate_elim_eq. 2: eauto.
     intros. rewrite H; intuition.
+    hnf; simpl; eauto.
+    apply IHfirst_choices.
+    intros; apply H.
+    destruct H2 as [q [??]].
+    exists q; simpl; eauto.
 Qed.
 
 Lemma majority_elim_eq :
   forall candidate elim elim' e c,
-    (forall x, elim x <-> elim' x) ->
+    (forall x, SF_spec.participates _ x e -> (elim x <-> elim' x)) ->
     SF_spec.majority candidate elim e c ->
     SF_spec.majority candidate elim' e c.
 Proof.
@@ -245,7 +285,7 @@ Qed.
 
 Lemma is_loser_elim_eq :
   forall candidate elim elim' e c,
-    (forall x, elim x <-> elim' x) ->
+    (forall x, SF_spec.participates _ x e -> (elim x <-> elim' x)) ->
     SF_spec.is_loser candidate elim e c ->
     SF_spec.is_loser candidate elim' e c.
 Proof.
@@ -265,7 +305,7 @@ Qed.
 
 Lemma winner_elim_eq :
   forall candidate elim elim' e c,
-    (forall x, elim x <-> elim' x) ->
+    (forall x, SF_spec.participates _ x e -> (elim x <-> elim' x)) ->
     SF_spec.winner candidate e elim c ->
     SF_spec.winner candidate e elim' c.
 Proof.
@@ -278,13 +318,14 @@ Proof.
     red; intros [c ?].
     apply H. exists c.
     eapply majority_elim_eq; eauto.
-    intro. rewrite H2; intuition.
+    intro. intro.
+    rewrite H2; intuition.
     eapply is_loser_elim_eq; eauto.
     apply IHwinner.
     unfold eliminated'.
     unfold update_eliminated.
     intuition.
-    rewrite H2 in H4. auto.
+    rewrite H2 in H5; auto.
     rewrite H2; auto.
 Qed.
 
@@ -788,10 +829,10 @@ Proof.
   induction n.
   * intros.
     eapply winner_elim_eq. 2: eauto.
-    intro.
+    intros.
     rewrite H5.
     intuition.
-    destruct losers. elim H8.
+    destruct losers. elim H9.
     inv H.
   * intros.
     destruct (classic (exists winner, majority _ eliminated e winner)).
@@ -869,10 +910,10 @@ Proof.
   induction n.
   * intros.
     eapply winner_elim_eq. 2: eauto.
-    intro.
+    intros.
     rewrite H5.
     intuition.
-    destruct losers. elim H8.
+    destruct losers. elim H9.
     inv H.
   * intros.
     inv H6.
@@ -914,12 +955,12 @@ Theorem sf_spec_optimization :
          (losers:list candidate)
          (loserCount:nat),
 
-      NoDup losers ->
-      (forall l, In l losers -> viable_candidate _ eliminated e l) ->
       count_votes _ (fun b =>
                        exists c, SF_spec.selected_candidate _ eliminated b c /\ In c losers)
                   e loserCount ->
+
       (exists c, ~In c losers /\ SF_spec.viable_candidate _ eliminated e c) ->
+
       (forall c count,
          ~In c losers ->
          SF_spec.viable_candidate _ eliminated e c ->
@@ -929,7 +970,102 @@ Theorem sf_spec_optimization :
       (forall x,
          SF_spec.winner candidate e eliminated x <-> SF_spec.winner candidate e eliminated' x).
 Proof.
-  intros. split.
-  apply sf_spec_optimization_forward with (length losers) losers loserCount; auto.
-  apply sf_spec_optimization_backward with (length losers) losers loserCount; auto.
+  intros.
+  assert (exists losers',
+            NoDup losers' /\
+            (forall l, In l losers' <-> viable_candidate _ eliminated e l /\ In l losers)).
+  { clear. induction losers.
+    * exists nil. simpl; intuition. constructor.
+    * destruct IHlosers as [losers' [??]].
+      destruct (classic (In a losers')).
+      + exists losers'. intuition.
+        rewrite H0 in H2; intuition.
+        rewrite H0 in H2; simpl; intuition.
+        rewrite H0. split; simpl in *; intuition.
+        subst l. auto.
+        rewrite H0 in H1.
+        intuition.
+      + destruct (classic (viable_candidate _ eliminated e a)).
+        - exists (a::losers').
+          split. constructor; auto.
+          simpl; intuition subst; auto.
+          rewrite H0 in H4; intuition.
+          rewrite H0 in H4; intuition.
+          rewrite H0; intuition.
+        - exists losers'.
+          simpl; intuition subst; auto.
+          rewrite H0 in H3; intuition.
+          rewrite H0 in H3; intuition.
+          rewrite H0; intuition.
+          rewrite H0; intuition.
+  }
+  destruct H3 as [losers' [??]].
+  set (eliminated'' c := eliminated c \/ In c losers').
+
+  cut (winner _ e eliminated x <-> winner _  e eliminated'' x).
+  { intros. rewrite H5.
+    cut (forall c, SF_spec.participates _ c e -> (eliminated'' c <-> eliminated' c)).
+    intros. split; apply winner_elim_eq; auto.
+    intros. symmetry; apply H6; auto.
+    intros. unfold eliminated''.
+    rewrite H2.
+    intuition.
+    right.
+    rewrite H4 in H9. intuition.
+    destruct (classic (eliminated c)); auto.
+    right.
+    rewrite H4. split; auto.
+    split; auto.
+  }
+
+  assert (Hviable : 
+   forall l : candidate,
+   In l losers' -> viable_candidate candidate eliminated e l).
+  { intros. rewrite H4 in H5. intuition. }
+
+  assert (Hcount :    count_votes candidate
+     (fun b : list (list candidate) =>
+      exists c : candidate,
+        selected_candidate candidate eliminated b c /\ In c losers') e
+     loserCount).
+  { revert H. apply count_eq.
+    intuition.
+    destruct H5 as [c [??]]. exists c; split; auto.
+    rewrite H4; auto. split; auto.
+    split.
+    eapply selected_candidate_not_eliminated; eauto.
+    destruct H5.
+    destruct H7 as [r [??]].
+    hnf; eauto.
+    exists b; split; auto.
+    exists r; split; auto.
+    eapply next_ranking_in_ballot; eauto.
+    destruct H5 as [c [??]].
+    exists c; split; auto.
+    rewrite H4 in H6. intuition.
+  }
+  assert (Hnonloser :    exists c : candidate,
+     ~ In c losers' /\ viable_candidate candidate eliminated e c).
+  { destruct H0 as [c [??]].
+    exists c; split; auto.
+    intro.
+    apply H0.
+    rewrite H4 in H6. intuition.
+  }
+  assert (Hdominated : forall (c : candidate) (count : nat),
+   ~ In c losers' ->
+   viable_candidate candidate eliminated e c ->
+   first_choices candidate eliminated c e count -> loserCount < count).
+  { intros.
+    eapply H1; eauto.
+    intro. apply H5.
+    apply H4. split; auto.
+  }
+  assert (Helim :
+     forall x0 : candidate, eliminated'' x0 <-> eliminated x0 \/ In x0 losers').
+  { unfold eliminated''. intuition. }
+
+  split.
+  apply sf_spec_optimization_forward with (length losers') losers' loserCount; auto.
+  apply sf_spec_optimization_backward with (length losers') losers' loserCount; auto.
 Qed.

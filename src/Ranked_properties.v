@@ -191,13 +191,17 @@ Section ranked_preference_voting_properties.
 
 
   Lemma count_eq (P Q:ballot -> Prop) (e:election) :
-    (forall b, P b <-> Q b) ->
+    (forall b, In b e -> (P b <-> Q b)) ->
     forall n, count_votes P e n -> count_votes Q e n.
   Proof.
     intros HPQ n H. induction H.
-    * apply count_satisfies; auto. apply HPQ; auto.
+    * apply count_satisfies; auto. apply HPQ; simpl; auto.
+      apply IHcount_votes.
+      intros; apply HPQ; simpl; auto.
     * apply count_not_satisfies; auto.
-      intro; apply H. apply HPQ; auto.
+      intro; apply H. apply HPQ; simpl; auto.
+      apply IHcount_votes.
+      intros; apply HPQ; simpl; auto.
     * apply count_nil.
   Qed.
 
@@ -232,7 +236,7 @@ Section ranked_preference_voting_properties.
     * destruct Hsat as [n [t [Hcount [Hmaj Hnt]]]].
       exists n, t; split; auto.
       revert Hcount; apply count_eq.
-      intro b; split; intro.
+      intros b _; split; intro.
       + red; intros. apply first_choice_prefers.
         simpl in H0; intuition; subst cin; auto.
         intro. apply H1. subst cin; auto.

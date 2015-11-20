@@ -2033,7 +2033,7 @@ Qed.
 Lemma count_votes_find_0s :
   forall allc election
   (NODUP : NoDup allc)
-  (PART : forall c, SF_spec.participates _ c election <-> In c allc) ,
+  (PART : forall c, SF_spec.participates _ c election -> In c allc) ,
    Ranked_properties.count_votes candidate
      (fun b : list (list candidate) =>
       exists c : candidate,
@@ -2057,7 +2057,6 @@ Proof.
   destruct H0 as [b [? [c [??]]]].
   assert (SF_spec.first_choices candidate (in_record []) c election 0).
   apply (find_0s_correct allc election c); auto.
-  intros. rewrite <- PART; auto.
   clear -H1 H0 H3.
   induction election.
   * elim H0.
@@ -2087,19 +2086,15 @@ Qed.
 
 Theorem run_election_correct : forall election winner tb rec allc res
   (TB : forall c x, tb c = Some x -> In x c)
-  (PART : forall c, SF_spec.participates _ c election <-> In c allc)
+  (PART : forall c, SF_spec.participates _ c election -> In c allc)
   (NODUP : NoDup allc),
     SF_imp.run_election candidate _ tb election allc = (Some winner, rec, res) ->
     SF_spec.winner _ election (in_record []) winner.
+Proof.
 intros. unfold SF_imp.run_election in H.
 apply run_election'_correct in H; auto.
 - rewrite -> sf_spec_optimization with
      (SF_imp.find_0s _ reldec_candidate allc election) 0%nat; auto. apply H.
-  + apply find_0s_nodup; auto.
-  + intros. split.
-    unfold in_record. intros [e [??]]. elim H1.
-    rewrite PART.
-    apply find_0s_subset in H0; auto.
   + apply count_votes_find_0s; auto.
   + exists winner.
     apply winner_viable in H.
@@ -2114,12 +2109,11 @@ apply run_election'_correct in H; auto.
     elim H0. clear H0.
     apply find_0s_complete; auto.
     intros. apply PART; auto.
-    apply PART. destruct H1; auto.
+    destruct H1; auto.
   + unfold in_record. firstorder. subst x0. auto.
 - intros.
   eexists. simpl. split. left. reflexivity.
   apply find_0s_complete; auto.
-  intros. apply PART; auto.
   destruct (SF_spec.sf_first_choices_total _ (in_record []) election c).
   destruct x; auto.
   cut (S x <= 0)%nat. omega.
@@ -2132,7 +2126,6 @@ apply run_election'_correct in H; auto.
   subst q.
   assert (SF_spec.first_choices _ (in_record []) c election 0).
   apply (find_0s_correct allc election c); auto.
-  intros. rewrite <- PART. auto.
   assert( 0 = S x)%nat.
   eapply SF_spec.sf_first_choices_unique; eauto.
   inv H5.
@@ -2140,7 +2133,6 @@ apply run_election'_correct in H; auto.
   hnf in H3.
   destruct H3 as [q[??]].
   elim H3.
-  apply PART. auto.
 Qed.
 
 End cand.
