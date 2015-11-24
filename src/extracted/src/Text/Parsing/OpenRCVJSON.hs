@@ -28,11 +28,16 @@ import Data.Vector (Vector)
 import qualified Data.Vector as Vec
 import Data.Scientific (toBoundedInteger)
 import Data.Text (Text)
-import qualified Data.Text as T (unpack)
+import qualified Data.Text as T
 
 import Data.Aeson
 import Data.Aeson.Types
 import Data.Aeson.Parser
+
+import Text.Parsing.ElectSON (Ballot(..))
+
+import qualified Text.Parsec as P
+import qualified Text.Parsec.Text as P
 
 data Candidates =
   Candidates
@@ -53,8 +58,14 @@ parseCandidates = withObject "toplevel" $ \e -> do
 data TestCase =
   TestCase
     { tcMeta   :: Object
-    , tcInput  :: Object
+    , tcInput  :: ElectionInput
     , tcOutput :: Object
+    } deriving (Show)
+
+data ElectionInput =
+  ElectionInput
+    { eiNumCandidates :: Int
+    , eiBallots       :: [Ballot Integer]
     } deriving (Show)
 
 getTestCase :: Int -> ByteString -> Either String TestCase
@@ -75,25 +86,47 @@ parseTestCase idx = withObject "toplevel" $ \e -> do
 
   aux (Just a) = const $ return (Just a)
   aux _ = withObject "test case" $ \obj -> do
-    m <- obj .: "_meta"
-    x <- m   .: "index"
-    i <- obj .: "input"
     o <- obj .: "output"
-    if x == idx then return $ Just $ TestCase m i o
+    i <- obj .: "input"
+    m <- i   .: "_meta"
+    x <- m   .: "index"
+    e <- parseElectionInput i
+    let tc = TestCase
+          { tcMeta = m
+          , tcInput = e
+          , tcOutput = o
+          }
+    if x == idx then return $ Just tc
                 else return Nothing
 
   e = "Test case with index " ++ (show idx)
     ++ " could not be found"
 
+parseElectionInput :: Object -> Parser ElectionInput
+parseElectionInput o = do
+  n <- o .: "candidate_count"
+  b <- o .: "ballots"
+  bs <- parseBallots b
+  return ElectionInput
+    { eiNumCandidates = n
+    , eiBallots = bs
+    }
 
 testInput :: Candidates -> TestCase -> String
 testInput cs tc = BC.unpack r
   where
   r = encode $ object
-    [ "candidate_names" .= csNames cs
+    [ "candidate_names" .= Vec.slice 0 num_candidates (csNames cs)
     , "_meta"           .= tcMeta tc
-    , "input"           .= tcInput tc
+    , "ballots"         .= ballots
     ]
+  num_candidates = eiNumCandidates (tcInput tc)
+  bs = eiBallots (tcInput tc)
+  ballots = Array $ Vec.fromList [ String $ ballotText b | b <- bs ]
+
+ballotText :: Ballot Integer -> Text
+ballotText (Ballot vs) = T.intercalate (T.pack " ")
+  [ T.pack (show v) | v <- vs ]
 
 data TestResult
   = TestResultMatch
@@ -163,3 +196,31 @@ parseTotals o = do
     Nothing -> fail ("Vote count of " ++ show s ++ " for "
                   ++ T.unpack k ++ " is not an integer.")
 
+parseBallots :: Array -> Parser [Ballot Integer]
+parseBallots a = mapM aux (Vec.toList a)
+  where
+  aux (String b) = case ballotFromText b of
+    Left e -> fail (show e)
+    Right t -> return t
+  aux v = typeMismatch "string ballot representation" v
+
+
+ballotFromText :: Text -> Either P.ParseError (Ballot Integer)
+ballotFromText = P.parse parseBallot ""
+
+parseBallot :: P.Parser (Ballot Integer)
+parseBallot = do
+  vs <- P.sepBy decimal (P.char ' ')
+  return (Ballot vs)
+
+decimal :: P.Parser Integer
+decimal = decDigit >>= go
+ where
+  decDigit = digitValue <$> P.digit
+
+  digitValue :: Char -> Integer
+  digitValue c = fromIntegral (fromEnum c - fromEnum '0')
+
+  go i = P.try (do d <- decDigit
+                   go (10*i + d))
+         P.<|> return i

@@ -32,7 +32,7 @@ library
     Specif
     Text.Parsing.BLT
     Text.Parsing.OpenRCVJSON
-    Text.Parsing.OpenRCVTests
+    Text.Parsing.ElectSON
 
   build-depends:
     base >=4.7 && <5.0,
@@ -65,18 +65,20 @@ test-suite sfTests
     tasty-quickcheck,
     tasty-hunit
 
-test-suite rcvTests
+test-suite electSONTests
   type: exitcode-stdio-1.0
   hs-source-dirs: tests
   default-language:    Haskell2010
 
-  main-is: RCVUnitTest.hs
+  main-is: ElectSONUnitTest.hs
 
   build-depends:
     base >= 4.7,
     bytestring,
     random,
     sfImp,
+    text,
+    containers,
     tasty,
     tasty-ant-xml,
     tasty-quickcheck,
@@ -91,13 +93,21 @@ executable rcv_testcase
   build-depends:
     base >= 4.7,
     simple-get-opt >= 0.1 && < 0.2,
-    aeson,
     bytestring,
-    containers,
     directory,
     filepath,
     process,
-    text,
-    vector,
+    sfImp
+  ghc-options: -Wall
+
+executable rcv_election
+  hs-source-dirs: executables
+  default-language:    Haskell2010
+
+  main-is: RCVElection.hs
+
+  build-depends:
+    base >= 4.7,
+    bytestring,
     sfImp
   ghc-options: -Wall
