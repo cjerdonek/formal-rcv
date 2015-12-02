@@ -117,9 +117,9 @@ encodeResults ElectionResults{..} = encode $ object
   arrayOf f v = Array (Vec.fromList (fmap f v))
 
 getElectionResults :: ByteString -> Either String (ElectionResults Text)
-getElectionResults input = case decode input of
-  Nothing -> Left "Input was not valid JSON"
-  Just v -> parseEither parseElectionResults v
+getElectionResults input = case eitherDecode input of
+  Left e -> Left ("Input was not valid JSON Value: " ++ e)
+  Right v -> parseEither parseElectionResults v
 
 
 parseElectionResults :: Value -> Parser (ElectionResults Text)

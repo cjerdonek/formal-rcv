@@ -47,9 +47,9 @@ data Candidates =
   deriving (Show)
 
 getCandidates :: ByteString -> Either String Candidates
-getCandidates input = case decode input of
-  Nothing -> Left "Input was not valid JSON"
-  Just v ->  parseEither parseCandidates v
+getCandidates input = case eitherDecode input of
+  Left e -> Left ("Input was not valid JSON Value: " ++ e)
+  Right v -> parseEither parseCandidates v
 
 parseCandidates :: Value -> Parser Candidates
 parseCandidates = withObject "toplevel" $ \e -> do
@@ -72,9 +72,9 @@ data ElectionInput =
     } deriving (Show)
 
 getTestCase :: Int -> ByteString -> Either String TestCase
-getTestCase index input = case decode input of
-  Nothing -> Left "Input was not valid JSON"
-  Just v ->  parseEither (parseTestCase index) v
+getTestCase index input = case eitherDecode input of
+  Left e -> Left ("Input was not valid JSON Value: " ++ e)
+  Right v -> parseEither (parseTestCase index) v
 
 parseTestCase :: Int -> Value -> Parser TestCase
 parseTestCase idx = withObject "toplevel" $ \e -> do
