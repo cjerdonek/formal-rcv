@@ -3,4 +3,4 @@ cabal run rcv_testcase -- \
        --rcv-path=../../../open-rcv-tests \
        --case=6 \
        --verbose \
-       cabal run rcv_election
+       ./dist/build/rcv_election/rcv_election

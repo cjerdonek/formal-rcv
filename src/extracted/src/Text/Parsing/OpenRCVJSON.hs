@@ -7,15 +7,16 @@ module Text.Parsing.OpenRCVJSON
 , TestCase(..)
 , getCandidates
 , getTestCase
-, testInput
+, testElection
 , TestResult(..)
-, testOutput
+, testElectionOutput
 ) where
 
 #if !MIN_VERSION_base(4,8,0)
 import Data.Functor
 #endif
 
+import qualified Data.List as L
 import Data.Foldable
 import Data.ByteString.Lazy (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as BC
@@ -34,14 +35,14 @@ import Data.Aeson
 import Data.Aeson.Types
 import Data.Aeson.Parser
 
-import Text.Parsing.ElectSON (Ballot(..))
+import Text.Parsing.ElectSON (Ballot(..), Election(..), ElectionResults(..), getElectionResults)
 
 import qualified Text.Parsec as P
 import qualified Text.Parsec.Text as P
 
 data Candidates =
   Candidates
-    { csNames :: Array
+    { csNames :: [Text]
     }
   deriving (Show)
 
@@ -53,18 +54,20 @@ getCandidates input = case decode input of
 parseCandidates :: Value -> Parser Candidates
 parseCandidates = withObject "toplevel" $ \e -> do
   cnames <- e .: "candidate_names"
-  return (Candidates cnames)
+  case L.nub cnames == cnames of
+    True -> return (Candidates cnames)
+    False -> fail "duplicate candidate names"
 
 data TestCase =
   TestCase
     { tcMeta   :: Object
     , tcInput  :: ElectionInput
-    , tcOutput :: Object
+    , tcOutput :: ElectionOutput
     } deriving (Show)
 
 data ElectionInput =
   ElectionInput
-    { eiNumCandidates :: Int
+    { eiNumCandidates :: Integer
     , eiBallots       :: [Ballot Integer]
     } deriving (Show)
 
@@ -86,18 +89,23 @@ parseTestCase idx = withObject "toplevel" $ \e -> do
 
   aux (Just a) = const $ return (Just a)
   aux _ = withObject "test case" $ \obj -> do
-    o <- obj .: "output"
     i <- obj .: "input"
     m <- i   .: "_meta"
     x <- m   .: "index"
-    e <- parseElectionInput i
-    let tc = TestCase
-          { tcMeta = m
-          , tcInput = e
-          , tcOutput = o
-          }
-    if x == idx then return $ Just tc
-                else return Nothing
+    if x /= idx then return Nothing
+    else do
+      -- We only want to try parsing the input/output objects for the particular
+      -- test we're looking for. Other tests may be malformed and we don't want
+      -- those to cause an error.
+      o'<- obj .: "output"
+      e <- parseElectionInput i
+      o <- parseElectionOutput o'
+      let tc = TestCase
+            { tcMeta = m
+            , tcInput = e
+            , tcOutput = o
+            }
+      return $ Just tc
 
   e = "Test case with index " ++ (show idx)
     ++ " could not be found"
@@ -106,23 +114,27 @@ parseElectionInput :: Object -> Parser ElectionInput
 parseElectionInput o = do
   n <- o .: "candidate_count"
   b <- o .: "ballots"
-  bs <- parseBallots b
+  bs <- parseBallots b n
   return ElectionInput
     { eiNumCandidates = n
     , eiBallots = bs
     }
 
-testInput :: Candidates -> TestCase -> String
-testInput cs tc = BC.unpack r
+-- this function is partial but i'm being lazy about catching the errors right
+-- now. inviariants are guaranteed by the parser (but of course i never
+-- documented what those invariants are)
+-- should replace it with one that catches errors
+testElection :: Candidates -> TestCase -> Either String (Election Text)
+testElection Candidates{..} TestCase{..} = Right Election{..}
   where
-  r = encode $ object
-    [ "candidate_names" .= Vec.slice 0 num_candidates (csNames cs)
-    , "_meta"           .= tcMeta tc
-    , "ballots"         .= ballots
-    ]
-  num_candidates = eiNumCandidates (tcInput tc)
-  bs = eiBallots (tcInput tc)
-  ballots = Array $ Vec.fromList [ String $ ballotText b | b <- bs ]
+  ElectionInput{..}  = tcInput
+  electionMeta       = tcMeta
+  numCandidates      = fromInteger eiNumCandidates
+  candidates         = take numCandidates csNames -- invariant - list contains no dupes, num candidates in bound
+  electionCandidates = Set.fromList candidates
+  electionBallots    = fmap lookupBallot eiBallots
+  lookupBallot (Ballot vs) = Ballot (lookupCandidate <$> vs)
+  lookupCandidate v  = candidates L.!! (fromInteger (v - 1)) -- invariant: less than int_max candidates, all ballots refer to existing candidates
 
 ballotText :: Ballot Integer -> Text
 ballotText (Ballot vs) = T.intercalate (T.pack " ")
@@ -132,22 +144,11 @@ data TestResult
   = TestResultMatch
   | TestResultMismatch String
 
--- Returns nothing if the string encoded output matches the candidates/testcase.
-testOutput :: TestCase -> String -> TestResult
-testOutput tc o = case decode (BC.pack o) of
-  Nothing -> TestResultMismatch "test output is not valid JSON"
-  Just v  -> case parseOutput v of
-    Left err -> TestResultMismatch
-      ("test output is not a valid election result: " ++ err)
-    Right output_res -> case parseOutput (tcOutput tc) of
-      Left err -> TestResultMismatch
-        ("test case expected output is not a valid election result: " ++ err)
-      Right output_expected -> case output_res == output_expected of
-        False -> TestResultMismatch ("test output does not match expected output")
-        True -> TestResultMatch
+testElectionOutput :: Candidates -> TestCase -> ElectionResults Text -> TestResult
+testElectionOutput _cs _tc _er = TestResultMismatch "testElectionOutput is unimplemented!!"
 
-data ElectionResult =
-  ElectionResult
+data ElectionOutput =
+  ElectionOutput
     { erRounds :: [ElectionRound]
     } deriving (Eq, Show)
 
@@ -157,13 +158,11 @@ data ElectionRound =
     , erTotals  :: Map Text Int
     } deriving (Eq,Show)
 
-parseOutput :: Object -> Either String ElectionResult
-parseOutput output = parseEither aux output
-  where
-  aux o = do
+parseElectionOutput :: Object -> Parser ElectionOutput
+parseElectionOutput o = do
     rs <- o .: "rounds"
     erRounds <- mapM parseRound rs
-    return ElectionResult{..}
+    return ElectionOutput{..}
 
 parseRound :: Value -> Parser ElectionRound
 parseRound v = withObject "round" aux v
@@ -196,31 +195,38 @@ parseTotals o = do
     Nothing -> fail ("Vote count of " ++ show s ++ " for "
                   ++ T.unpack k ++ " is not an integer.")
 
-parseBallots :: Array -> Parser [Ballot Integer]
-parseBallots a = mapM aux (Vec.toList a)
+parseBallots :: Array -> Integer -> Parser [Ballot Integer]
+parseBallots a numCandidates = mapM aux (Vec.toList a)
   where
-  aux (String b) = case ballotFromText b of
+  aux (String b) = case ballotFromText numCandidates b of
     Left e -> fail (show e)
     Right t -> return t
   aux v = typeMismatch "string ballot representation" v
 
 
-ballotFromText :: Text -> Either P.ParseError (Ballot Integer)
-ballotFromText = P.parse parseBallot ""
+ballotFromText :: Integer -> Text -> Either P.ParseError (Ballot Integer)
+ballotFromText numCandidates = P.parse parseBallot ""
+  where
+  parseBallot :: P.Parser (Ballot Integer)
+  parseBallot = do
+    vs <- P.sepBy decimal (P.char ' ')
+    return (Ballot vs)
 
-parseBallot :: P.Parser (Ballot Integer)
-parseBallot = do
-  vs <- P.sepBy decimal (P.char ' ')
-  return (Ballot vs)
+  decimalCandidate :: P.Parser Integer
+  decimalCandidate = do
+    c <- decimal
+    case c > 0 && c <= numCandidates of
+      True -> return c
+      False -> fail ("candidate out of range: " ++ show c)
 
-decimal :: P.Parser Integer
-decimal = decDigit >>= go
- where
-  decDigit = digitValue <$> P.digit
+  decimal :: P.Parser Integer
+  decimal = decDigit >>= go
+   where
+    decDigit = digitValue <$> P.digit
 
-  digitValue :: Char -> Integer
-  digitValue c = fromIntegral (fromEnum c - fromEnum '0')
+    digitValue :: Char -> Integer
+    digitValue c = fromIntegral (fromEnum c - fromEnum '0')
 
-  go i = P.try (do d <- decDigit
-                   go (10*i + d))
-         P.<|> return i
+    go i = P.try (do d <- decDigit
+                     go (10*i + d))
+           P.<|> return i

@@ -109,5 +109,6 @@ executable rcv_election
   build-depends:
     base >= 4.7,
     bytestring,
+    containers,
     sfImp
   ghc-options: -Wall

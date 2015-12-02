@@ -10,9 +10,12 @@ import System.Process
 
 import Control.Monad (when, unless)
 
+import Data.ByteString.Lazy (ByteString)
 import qualified Data.ByteString.Lazy as B
+import qualified Data.ByteString.Lazy.Char8 as BC
 
 import Text.Parsing.OpenRCVJSON
+import Text.Parsing.ElectSON
 
 data Config =
   Config
@@ -82,34 +85,36 @@ run c = do
   verbose $ print candidates
   verbose $ print test
 
-  let input = testInput candidates test
-  verbose $ putStrLn "Test input:" >> putStrLn input
+  election <- catch "test election invalid" $ testElection candidates test
+
+  let input = encodeElection election
+
+  verbose $ putStrLn "Test input:" >> BC.putStrLn input
 
   output <- execSubprocess c input
 
-  verbose $ putStrLn "Test output:" >> putStrLn output
+  verbose $ putStrLn "Test output:" >> BC.putStrLn output
 
-  let r = testOutput test output
+  electionResults <- catch "election results invalid" $ getElectionResults output
 
-  case r of
-    TestResultMatch -> do
-      verbose $ putStrLn "PASS: Test matched expected output."
+  case testElectionOutput candidates test electionResults of
     TestResultMismatch s -> do
       verbose $ putStrLn "FAIL: Test did not match expected output."
       hPutStrLn stderr s
       exitFailure
-
-  exitSuccess
+    TestResultMatch -> do
+      verbose $ putStrLn "PASS: Test matched expected output."
+      exitSuccess
   where
   verbose = when (confVerbose c)
 
-execSubprocess :: Config -> String -> IO String
+execSubprocess :: Config -> ByteString -> IO ByteString
 execSubprocess conf input = do
   when (null e) $ hPutStrLn stderr notest >> exitFailure
-  (exitcode, output, err) <- readProcessWithExitCode cmd args input
+  (exitcode, output, err) <- readProcessWithExitCode cmd args (BC.unpack input)
   unless (null err) $ hPutStr stderr err
   case exitcode of
-    ExitSuccess -> return output
+    ExitSuccess -> return (BC.pack output)
     ExitFailure n -> hPutStrLn stderr (childfail n) >> exitFailure
   where
   e = confExe conf
@@ -118,10 +123,13 @@ execSubprocess conf input = do
   notest = "Fatal: no executable under test given"
   childfail n = "Fatal: child process exited with error code " ++ show n
 
-catchParseErr :: (Show a) => String -> Either String a -> IO a
-catchParseErr _ (Right a) = return a
-catchParseErr ctx (Left e) = hPutStrLn stderr msg >> exitFailure
-  where msg = "Fatal: when parsing " ++ ctx ++ ": " ++ e
+catch :: String -> Either String a -> IO a
+catch _ (Right a) = return a
+catch ctx (Left e) = hPutStrLn stderr (ctx ++ ": " ++ e) >> exitFailure
+
+catchParseErr :: String -> Either String a -> IO a
+catchParseErr ctx = catch msg
+  where msg = "Fatal: when parsing " ++ ctx
 
 assertExists :: String -> FilePath -> IO ()
 assertExists name fp = do
@@ -132,7 +140,7 @@ assertExists name fp = do
   where
   msg = "Fatal: no file at path given for " ++ name ++ ": " ++ fp
 
-getBSContents :: String -> FilePath -> IO B.ByteString
+getBSContents :: String -> FilePath -> IO ByteString
 getBSContents name fp = do
   assertExists name fp
   B.readFile fp
