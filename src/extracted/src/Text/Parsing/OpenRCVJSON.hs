@@ -196,21 +196,28 @@ parseTotals o = do
                   ++ T.unpack k ++ " is not an integer.")
 
 parseBallots :: Array -> Integer -> Parser [Ballot Integer]
-parseBallots a numCandidates = mapM aux (Vec.toList a)
+parseBallots a numCandidates = L.concat <$> mapM aux (Vec.toList a)
   where
+  aux :: Value -> Parser [Ballot Integer]
   aux (String b) = case ballotFromText numCandidates b of
     Left e -> fail (show e)
-    Right t -> return t
+    Right (n, b) -> return (take (fromInteger n) (repeat b))
   aux v = typeMismatch "string ballot representation" v
 
 
-ballotFromText :: Integer -> Text -> Either P.ParseError (Ballot Integer)
+ballotFromText :: Integer -> Text -> Either P.ParseError (Integer, Ballot Integer)
 ballotFromText numCandidates = P.parse parseBallot ""
   where
-  parseBallot :: P.Parser (Ballot Integer)
+  parseBallot :: P.Parser (Integer, Ballot Integer)
   parseBallot = do
-    vs <- P.sepBy decimal (P.char ' ')
-    return (Ballot vs)
+    -- A ballot string is an integer followed by many integers. The first
+    -- integer indicates how many times an identical ballot was cast in an
+    -- election. The remaining integers indicate the candidates voted for, in
+    -- rank order, by the ballot.
+    ns <- P.sepBy decimal (P.char ' ')
+    case ns of
+      n:vs | n > 0 -> return (n, Ballot vs)
+      [] -> fail "ballot text must be at least one integer"
 
   decimalCandidate :: P.Parser Integer
   decimalCandidate = do

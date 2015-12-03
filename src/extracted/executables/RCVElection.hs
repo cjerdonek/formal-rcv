@@ -28,9 +28,8 @@ catchParseErr ctx (Left e) = hPutStrLn stderr msg >> exitFailure
 run :: Eq c => Election c -> ElectionResults c
 run Election{..} = ElectionResults{..}
   where
-  electionBins = [] -- XXX FIXME
   electionResultsMeta = electionMeta
-  ((electionWinner, electionRecord), _bins) = run_election
+  ((electionWinner, electionRecord), electionBins) = run_election
     relDec
     tieBreak
     (map coqBallot electionBallots)
