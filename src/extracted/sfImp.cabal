@@ -30,6 +30,7 @@ library
     SF_spec
     SF_tests
     Specif
+    BinIntConvert
     Text.Parsing.BLT
     Text.Parsing.OpenRCVJSON
     Text.Parsing.ElectSON
@@ -43,7 +44,8 @@ library
     vector >= 0.11 && < 0.12,
     unordered-containers >= 0.2 && < 0.3,
     scientific >= 0.3 && < 0.4,
-    aeson >= 0.10.0.0 && < 0.11
+    aeson >= 0.10.0.0 && < 0.11,
+    QuickCheck >= 2.8
 
   hs-source-dirs: ext, src
   default-language:    Haskell2010

@@ -9,6 +9,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Text.Parsing.ElectSON
 
+import BinIntConvert
 import SF_imp
 
 main :: IO ()
@@ -29,7 +30,8 @@ run :: Eq c => Election c -> ElectionResults c
 run Election{..} = ElectionResults{..}
   where
   electionResultsMeta = electionMeta
-  ((electionWinner, electionRecord), electionBins) = run_election
+  electionBins = fmap (fmap (fmap n2int)) electionBins0
+  ((electionWinner, electionRecord), electionBins0) = run_election
     relDec
     tieBreak
     (map coqBallot electionBallots)
