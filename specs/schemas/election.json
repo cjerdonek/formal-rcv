@@ -17,7 +17,7 @@
 	    }
 	},
 	"votes": {
-	    "description" : "all of the votes in the election"
+	    "description" : "all of the votes in the election",
 	    "type": "array",
 	    "items": {
 		"oneOf": [{
