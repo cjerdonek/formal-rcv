@@ -5,7 +5,9 @@
 ### Prerequisites
 
 Install Coq. This project currently builds with
-[Version8.4pl6](https://coq.inria.fr/coq-84) Install the
+[Version8.4pl6](https://coq.inria.fr/coq-84) 
+
+Install the
 [Haskell Platform](https://www.haskell.org/platform/) be sure to get
 at least GHC 7.8
 
