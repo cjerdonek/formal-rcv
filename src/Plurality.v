@@ -68,22 +68,26 @@ Section candidate.
   Definition addTallies participants election :=
     map (fun participant => (participant, countParticipant election participant)) participants.
 
-  Fixpoint getMax' (pairs : list (candidate * N)) (max : (candidate * N * bool)) : option candidate :=
-    match pairs, max with
-    | (cand, ct) :: t, (maxcd, maxct, _) => if N.eqb ct maxct
-                                           then getMax' t (maxcd, maxct, false)
+  Fixpoint getMax' (pairs : list (candidate * N)) (first : (candidate * N * bool)) : (candidate * N * bool) :=
+    match pairs with
+    | (cand, ct) :: t => match (getMax' t first) with (retcd, retn, retunique) =>
+                                           if N.eqb ct retn
+                                           then (retcd, retn, false)
                                            else
-                                             if (N.leb ct maxct)
-                                             then getMax' t max
-                                             else getMax' t (cand, ct, true)
-    | [], (maxcd, _, true) => Some maxcd
-    | [], (_, _, false) => None
+                                             if (N.leb ct retn)
+                                             then (retcd, retn, retunique)
+                                             else (cand, ct, true)
+                        end
+    | [] => first
     end.
 
   Definition getMaxCand pairs : option candidate :=
     match pairs with
     | [] => None
-    | h :: t => (getMax' pairs (h, true))
+    | h :: t => match (getMax' pairs ((fst h), 0, false)) with
+               | (_, _, false) => None
+               | (cd, _, _) => Some cd
+               end
     end.
 
   Definition runPluralityElection election :=
@@ -184,20 +188,122 @@ Section cand.
           inversion H; intuition.
   Qed.
 
-  Theorem getMax'_correct : forall (prs : list (candidate * N)) maxcand maxct unique totalMax,
-      getMax' candidate prs (maxcand, maxct, unique) = Some totalMax ->
-      (exists totalMaxCt, (In (totalMax, totalMaxCt) prs \/ (totalMaxCt = maxct /\ totalMax = maxcand)) /\
-                     (forall ct, In ct (map (@snd candidate _) (prs : list (candidate * N))) -> totalMaxCt > ct)).
+  Lemma addTallies_correct : forall participants election c n,
+      In (c, n) (addTallies candidate reldec_candidate participants election) ->
+      voteCount candidate c election n.
+  Proof.
+    unfold addTallies.
+    intros. apply in_map_iff in H. destruct H.  destruct H.
+    inversion H. subst. clear H.
+    remember (countParticipant candidate reldec_candidate election c). symmetry in Heqn.
+    apply count_correct in Heqn. auto.
+  Qed.
+    
+  Theorem getMax'_correct : forall (prs : list (candidate * N)) fst resCand resCt resUnique,
+      getMax' candidate prs fst = (resCand, resCt, resUnique) ->
+      forall cd n, In (cd, n) prs -> n <= resCt.
+  Proof.
     intros prs.
     induction prs; intros.
-    - simpl in *. destruct unique eqn:?. subst. inversion H.
-      subst. eexists. split. eauto. intuition. congruence.
-    - simpl in H. destruct a. simpl. destruct (n =? maxct) eqn:?.
-      + apply IHprs in H. destruct H. intuition.
-        *  exists x. intuition. apply H1. subst. apply N.eqb_eq in Heqb. subst.
-           
-        apply IHprs.
-  
+    - inversion H0.
+    - simpl in H0.
+      destruct H0.
+      + subst.  simpl in H.
+        destruct (getMax' candidate prs fst) eqn:?. destruct p.
+        destruct (n =? n0) eqn:?.
+        * apply N.eqb_eq in Heqb0. subst.
+          inversion H; subst; clear H. apply N.le_refl.
+        * { destruct (n <=? n0) eqn:?.
+            - inversion H; subst; clear H. apply N.leb_le in Heqb1. auto.
+            - inversion H; subst; clear H. apply N.le_refl.
+          }
+      + simpl in H. destruct a. destruct (getMax' candidate prs fst) eqn:?.
+        destruct p. destruct (n0=? n1) eqn:?.
+        * inversion H. subst; clear H. apply N.eqb_eq in Heqb0. subst. eapply IHprs in Heqp.
+          eauto. apply H0.
+        * {destruct (n0 <=? n1) eqn:?; inversion H; subst; clear H.
+           - eapply IHprs in Heqp. eauto. apply H0.
+           - eapply IHprs in Heqp. instantiate (1 := n) in Heqp.
+             apply N.eqb_neq in Heqb0.
+             apply N.leb_gt in Heqb1.
+             eapply N.le_lt_trans in Heqp; eauto.
+             apply N.lt_le_incl. auto. eauto.
+          }
+  Qed.
+
+   Theorem getMax'_unique : forall (prs : list (candidate * N)) fst resCand resCt,
+      getMax' candidate prs fst = (resCand, resCt, true) ->
+      In (resCand, resCt) prs -> exists f b, prs = f ++ (resCand, resCt) :: b /\ ~ In resCt (map (@snd candidate _) f) /\ ~ In resCt (map (@snd candidate _) b).
+   Proof.
+     intros prs.
+     induction prs; intros.
+     - inversion H0.
+     - simpl in *. destruct a. destruct ( getMax' candidate prs fst) eqn:?.
+       destruct p. destruct (n=? n0) eqn:?.
+       + inversion H.
+       + destruct (n <=? n0) eqn:?.
+         * inversion H; subst; clear H.
+           { destruct H0.
+             - inversion H; subst; clear H.
+               apply N.eqb_neq in Heqb0. intuition.
+             - apply IHprs in Heqp; auto.
+               destruct Heqp. destruct H0.
+               destruct H0. destruct H1.
+               exists ((c,n) :: x).
+               exists x0.
+               split.
+               + simpl. f_equal. auto.
+               + split.
+                 *  simpl. intro.
+                    { destruct H3.
+                      - apply N.eqb_neq in Heqb0; intuition.
+                      - auto.
+                    }
+                 * auto.
+           }
+         * inversion H; subst; clear H.
+           apply N.leb_gt in Heqb1. clear H0.
+           exists nil. exists prs. split. auto.
+           split. auto. intro. eapply in_map_iff in H.
+           destruct H. destruct x. destruct H.
+           simpl in H. subst.
+           eapply getMax'_correct in H0; eauto.
+           rewrite <- N.nlt_ge in H0. intuition.
+   Qed.
+
+   Lemma get_participants_nodup : forall l, NoDup (getParticipants candidate reldec_candidate l).
+   Proof.
+     induction l; intros.
+     - simpl. constructor.
+     - simpl. destruct (existsb (eq_dec a) (getParticipants candidate reldec_candidate l)) eqn:?.
+       + auto.
+       + rewrite existb_false_forall in Heqb. constructor.
+         * intro. specialize (Heqb a). intuition.
+           apply neg_rel_dec_correct in H0. intuition. 
+         * auto.
+   Qed.
+
+   Lemma addTalliesNoDup : forall participants election,
+       NoDup participants -> NoDup (map (@fst candidate _) (addTallies candidate reldec_candidate participants election)).
+   Proof.
+     induction participants; intros.
+     - simpl. auto.
+     - simpl. inversion H.
+       subst. clear H.
+       constructor.
+       + { clear H3  IHparticipants.
+           induction participants.
+           - simpl. auto.
+           - simpl. intro.
+             destruct H.
+             + subst. apply H2. simpl. auto.
+             + apply IHparticipants. intro. apply H2.
+               right. auto. auto.
+         }
+       + apply IHparticipants. auto.
+   Qed.
+
+(*   
   Theorem getMaxCand_correct : forall cand prs election mx,
       (forall cnd cnt, In (cnd, cnt) prs -> voteCount candidate cnd election cnt) ->
       (getMax' candidate mx = Some cand <-> hasPlurality candidate cand election).
@@ -207,19 +313,113 @@ Section cand.
     - induction prs.
       + simpl in *; congruence.
       + simpl in H0. 
-    
+  *)  
        
                                
-  
-  
-  Theorem pluralityCorrect :
-    forall election winner,
-      runPluralityElection candidate reldec_candidate election = Some winner <->
-      hasPlurality candidate winner election.
-  Proof.
-    intros.
-    unfold runPluralityElection. split. intros.
-    unfold hasPlurality. intros candidate0 candidateCount winningCandidateCount H0 H1 H2.
+   Lemma in_ne_in_other : forall A (l : list A) i1 i2,
+       In i1 l ->
+       In i2 l ->
+       i1 <> i2 ->
+       exists s f, l = s ++ i1 :: f /\ (In i2 s \/ In i2 f).
+   Proof.
+     induction l; intros.
+     - inversion H.
+     - simpl in *. destruct H, H0; subst.
+       + intuition. 
+       + exists nil. exists l. intuition.
+       + apply in_split in H. destruct H. destruct H. subst.
+         exists (i2 :: x). exists x0. intuition.
+       + specialize (IHl i1 i2 H H0 H1).
+         destruct IHl. destruct H2. destruct H2.
+         subst.
+         exists (a::x). exists x0. split. auto.
+         clear H.
+         apply in_app_or in H0.
+         destruct H0. left. simpl. auto.
+         right. simpl in H. intuition.
+   Qed.
+   
+   Lemma getMax'_false_in : forall prs c winner n,
+       getMax' candidate prs (c, 0, false) = (winner, n, true) ->
+       In (winner, n) prs.
+   Proof.
+     induction prs; intros.
+     - simpl in H. congruence.
+     - simpl in H. destruct a. destruct (getMax' candidate prs (c, 0, false)) eqn:?.
+       destruct p.
+       destruct (n0 =? n1) eqn:?.
+       +  congruence.
+       +  destruct (n0 <=? n1) eqn:?.
+          *  inversion H; subst; clear H.
+             apply IHprs in Heqp. right. auto.
+          * inversion H; subst; clear H.
+            left. auto.
+   Qed.
+   
+   Ltac inv H := inversion H; subst; clear H.
+   Lemma voteCount_unique :
+     forall cand election ct1 ct2,
+       voteCount candidate cand election ct1 ->
+       voteCount candidate cand election ct2 ->
+       ct1 = ct2.
+   Proof.
+     induction election; intros.
+     - inversion H. inversion H0. auto.
+     - inv H; inv H0.
+       + rewrite N.add_comm. rewrite (N.add_comm ct0). f_equal. apply IHelection; auto.
+       + intuition.
+       + intuition.
+       + apply IHelection; auto.
+   Qed.
+
+   Lemma participates_in_count : forall participants election cand count,
+       In cand participants ->
+       voteCount candidate cand election count ->
+       In (cand, count) (addTallies candidate reldec_candidate participants election).
+   Proof.
+     induction participants; intros.
+     - inversion H.
+     - simpl in H. destruct H.
+       + subst. simpl. left. f_equal.
+         apply count_correct. auto.
+       + simpl. right. apply IHparticipants; auto.
+   Qed.
+
+   
+   Theorem pluralityCorrect :
+     forall election winner,
+       runPluralityElection candidate reldec_candidate election = Some winner <->
+       hasPlurality candidate winner election.
+   Proof.
+     intros.
+     unfold runPluralityElection. split; intros.
+     -  unfold getMaxCand in H. destruct (addTallies candidate reldec_candidate (getParticipants candidate reldec_candidate election) election) eqn:?; try congruence.
+        destruct (getMax' candidate (p :: l) (fst p, 0, false)) eqn:?.
+        destruct p0. destruct b eqn:?; inversion H; subst; clear H.
+        pose proof getMax'_correct _ _ _ _ _ Heqp0.
+        unfold hasPlurality. intros candidate0 candidateCount winningCandidateCount H0 H1 H2.
+        pose proof addTallies_correct (getParticipants candidate reldec_candidate election) election.
+        
+        pose proof getMax'_false_in _ _ _ _ Heqp0.
+        rewrite Heql in *.
+        pose proof (H3 _ _ H4).
+        
+        eapply voteCount_unique in H2; eauto. subst.
+        edestruct (in_dec (rel_dec_p) candidate0 (getParticipants candidate reldec_candidate election)).
+        + pose proof (participates_in_count _ _ _ _ i H1).
+          rewrite Heql in *. apply H in H2.
+          assert (candidateCount <> winningCandidateCount).
+          { 
+            apply getMax'_unique in Heqp0.
+            destruct Heqp0.
+            destruct H6. destruct H6. intuition. subst.
+            eapply in_ne_in_other in H4.
+            
+     
+
+    
+
+    
     
     
 
