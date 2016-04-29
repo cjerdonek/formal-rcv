@@ -20,93 +20,86 @@
 	    "description" : "all of the votes in the election",
 	    "type": "array",
 	    "items": {
-		"oneOf": [{
-		    "type": "object",
-		    "properties": {
-			"test": {
-			    "description": "Test being true indicates that this election might used compressed form, and will come with output",
-			    "type": "boolean",
-			    "enum": [true]
-			},
-			"id": {
-			    "description": "A unique identifier for each ballot",
-			    "type": "integer"
-			},
-			"ranks": {
-			    "description": "The rankings on this ballot, ordered from first to last within the list",
-			    "type": "array",
-			    "items": {
-				"description": "A rank selection. Is an array because it allows overvotes",
-				"type": "array",
-				"items": {
-				    "type": "integer"
-				}
-			    }
-			}
-		    },
-		    "required": [
-			"id",
-			"ranks"
-		    ],
-		    "additionalProperties": false
-		}]
+		      "type": "object",
+		      "properties": {
+			        "id": {
+			            "description": "A unique identifier for each ballot",
+			            "type": "integer"
+			        },
+			        "ranks": {
+			            "description": "The rankings on this ballot, ordered from first to last within the list",
+			            "type": "array",
+			            "items": {
+				              "description": "A rank selection. Is an array because it allows overvotes",
+				              "type": "array",
+				              "items": {
+				                  "type": "integer"
+				              }
+			            }
+			        }
+		      },
+		      "required": [
+			        "id",
+			        "ranks"
+		      ],
+		      "additionalProperties": false
 	    }
 	},
-	"tiebreak": {
-	    "description" : "the candidate that should be chosen in each successive tiebreak to give the results as reported in the results value",
-	    "type": "array",
-	    "items": {
-		"type": "integer"
-	    }
-	},
-	"results": {
-	    "description" : "a record of what happened as the election was tabulated",
-	    "type": "object",
-	    "properties": {
-		"winner": {
-		    "description" : "which candidate won the election",
-		    "type": "integer"
-		},
-		"record": {
-		    "description" : "a round by round summary of the results of the election",
-		    "type": "array",
-		    "items": {
-			"type": "object",
-			"properties": {
-			    "tally": {
-				"description" : "the number of first choice selections for some/all of the candidates",
-				"type": "array",
-				"items": {
-				    "type": "object",
-				    "properties": {
-					"candidate": {
-					    "type": "integer"
-					},
-					"firstChoices": {
-					    "type": "integer"
-					}
-				    },
-				    "required": ["candidate", "firstChoices"],
-				    "additionalProperties": false   
-				}
-			    },
-			    "eliminated": {
-				"type": "array",
-				"items": {
-				    "type": "integer"
-				}
-			    }
-			}
-		    }
-		}
-	    },
-	    "required": ["winner"],
-	    "additionalProperties": false  
-	}
+	      "tiebreak": {
+	          "description" : "the candidate that should be chosen in each successive tiebreak to give the results as reported in the results value",
+	          "type": "array",
+	          "items": {
+		            "type": "integer"
+	          }
+	      },
+	      "results": {
+	          "description" : "a record of what happened as the election was tabulated",
+	          "type": "object",
+	          "properties": {
+		            "winner": {
+		                "description" : "which candidate won the election",
+		                "type": "integer"
+		            },
+		            "record": {
+		                "description" : "a round by round summary of the results of the election",
+		                "type": "array",
+		                "items": {
+			                  "type": "object",
+			                  "properties": {
+			                      "tally": {
+				                        "description" : "the number of first choice selections for some/all of the candidates",
+				                        "type": "array",
+				                        "items": {
+				                            "type": "object",
+				                            "properties": {
+					                              "candidate": {
+					                                  "type": "integer"
+					                              },
+					                              "firstChoices": {
+					                                  "type": "integer"
+					                              }
+				                            },
+				                            "required": ["candidate", "firstChoices"],
+				                            "additionalProperties": false
+				                        }
+			                      },
+			                      "eliminated": {
+				                        "type": "array",
+				                        "items": {
+				                            "type": "integer"
+				                        }
+			                      }
+			                  }
+		                }
+		            }
+	          },
+	          "required": ["winner"],
+	          "additionalProperties": false
+	      }
     },
     "additionalProperties" : false,
     "dependencies" : {
-	"isTest" : ["results", "tiebreak", "counts"]
+	      "isTest" : ["results", "tiebreak", "counts"]
     }
 }
 
