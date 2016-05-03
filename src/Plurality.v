@@ -385,14 +385,123 @@ Section cand.
        + simpl. right. apply IHparticipants; auto.
    Qed.
 
+   Lemma split_l_map : forall A B (l : list (A * B)),
+       fst (split l) = map (@fst A B) l.
+   Proof.
+     induction l; intros.
+     auto.
+     simpl in *. destruct a. simpl in *.
+     destruct (split l) eqn:?. simpl in *. f_equal.
+     auto.
+     Qed.
+
+      Lemma split_r_map : forall A B (l : list (A * B)),
+       snd (split l) = map (@snd A B) l.
+   Proof.
+     induction l; intros.
+     auto.
+     simpl in *. destruct a. simpl in *.
+     destruct (split l) eqn:?. simpl in *. f_equal.
+     auto.
+     Qed.
+
+   
+
+   Lemma noDup_fst_noDup : forall A B (l : list (A*B)),
+       NoDup (map (@fst A B) l) -> NoDup l.
+   Proof.
+     induction l; intros.
+     - constructor.
+     - inv H.  destruct a.
+       simpl in *. constructor.
+       + intuition.
+         apply H2. apply in_split_l in H. simpl in H.
+         rewrite <- split_l_map. auto.
+       + intuition.
+   Qed.
+
+   Lemma noDup_same_split:
+     forall A (i: A) h1 t1 h2 t2,
+       NoDup (h1 ++ i :: t1) ->
+       h1 ++ i :: t1 = h2 ++ i :: t2 ->
+       h1 = h2 /\ t1 = t2.
+   Proof.
+     intros. assert (NoDup (h2 ++ i :: t2)). rewrite H0 in *. auto.
+     generalize dependent h2. generalize dependent t1. revert t2.
+     induction h1; intros.
+     - simpl in *.
+       induction h2.
+       +  simpl in *. inv H0. auto.
+       +  simpl in *. 
+          inv H1. inv H0. clear - H. inv H. exfalso. apply H2.
+          apply in_app_iff. right. simpl. auto.
+     - simpl in *. inv H0.
+       inv H.
+       induction h2.
+       + inv H3.  exfalso. apply H4. apply in_app_iff. right. simpl; auto.
+       + inv H3. inv H1. apply IHh1 in H2; auto. intuition. subst. auto.
+   Qed.
+             
+
+Lemma not_participant_no_votes : forall cd election,
+            ~ participates candidate cd election -> voteCount candidate cd election 0.
+          Proof.
+            induction election; intros.
+            - constructor.
+            - simpl in *. intuition.
+              apply voteCountOther; auto.
+          Qed.
+
+              Lemma voteCount_decidable : forall cd election,
+                  exists n, voteCount candidate cd election n.
+              Proof.
+                induction election; intros. exists 0. constructor.
+                destruct IHelection.
+                destruct (rel_dec_p cd a). subst. 
+                exists (x + 1). constructor; auto.
+                exists x. constructor; auto.
+              Qed.
+              
+          
+          Lemma participant_nonzero_votes : forall cd election,
+              participates candidate cd election -> exists n, voteCount candidate cd election (n + 1).
+          Proof.
+            induction election; intros.
+            - inversion H.
+            - simpl in H. destruct H.
+              + subst.
+                destruct (voteCount_decidable cd election); auto.
+                exists x. constructor; auto.
+              + intuition. destruct H0.
+                destruct (rel_dec_p cd a).
+                subst. exists (x + 1 ). constructor; auto.
+                exists x. apply voteCountOther; auto.
+          Qed.
+
+                      Lemma in_tally_participant : forall cd ct election participants,
+                In (cd, ct) (addTallies candidate reldec_candidate participants election) ->
+                In cd participants.
+            Proof.
+              induction participants; intros.
+              - simpl in *. auto.
+              - simpl in *. destruct H.
+                + inv H. auto.
+                + intuition.
+            Qed.
+
+                      Lemma n_succ_gt_O : forall (n:N),   0 < N.succ n.
+            induction n using N.peano_ind.
+            rewrite <- N.compare_lt_iff. auto.
+            rewrite  <- N.compare_lt_iff in *. simpl in *. destruct (N.succ n). congruence.
+            auto.
+                      Qed.
    
    Theorem pluralityCorrect :
      forall election winner,
-       runPluralityElection candidate reldec_candidate election = Some winner <->
+       runPluralityElection candidate reldec_candidate election = Some winner ->
        hasPlurality candidate winner election.
    Proof.
-     intros.
-     unfold runPluralityElection. split; intros.
+     unfold runPluralityElection.  intros.
      -  unfold getMaxCand in H. destruct (addTallies candidate reldec_candidate (getParticipants candidate reldec_candidate election) election) eqn:?; try congruence.
         destruct (getMax' candidate (p :: l) (fst p, 0, false)) eqn:?.
         destruct p0. destruct b eqn:?; inversion H; subst; clear H.
@@ -410,37 +519,44 @@ Section cand.
           rewrite Heql in *. apply H in H2.
           assert (candidateCount <> winningCandidateCount).
           { 
-            apply getMax'_unique in Heqp0.
+            apply getMax'_unique in Heqp0; auto.
             destruct Heqp0.
             destruct H6. destruct H6. intuition. subst.
-            eapply in_ne_in_other in H4.
-            
-     
-
-    
-
-    
-    
-    
-
-            
-  
-(*  Fixpoint removeCandidate candidate candidates {struct candidates} :=
-    match candidates with
-    | h :: t =>
-      if eq_dec candidate h then removeCandidate candidate t
-      else h :: removeCandidate candidate t
-    | [] => []
-    end.
-  
-  Function removeDups all {measure length all} := 
-    match all with
-    | h :: t => h :: (removeDups (removeCandidate h t))
-    | [] => []
-    end.
-  intros. subst.
-  induction t; intros.
-  - auto.
-  - simpl. destruct (eq_dec h a); auto. simpl in *. 
-    Require Coq.omega.Omega. omega.
-Defined. 
+            eapply participates_in_count in H1; eauto.
+            rewrite Heql in *.
+            pose proof (in_ne_in_other _ (p::l) _  _ H4 H1).
+            destruct H7.
+            - intro. inv H7; auto.
+            - destruct H7. 
+              + rewrite H6 in *.
+                assert (NoDup (p :: l)).
+                { rewrite H6 in *. rewrite <- Heql in *.
+                  apply noDup_fst_noDup. 
+                  apply addTalliesNoDup.
+                  apply get_participants_nodup. }
+                rewrite H6 in *. destruct H7.
+                apply noDup_same_split in H7; auto. destruct H7. subst x x0.
+                intuition.
+                * clear - H9 H7. apply H9; clear H9. apply in_split_r in H7.
+                  rewrite <- split_r_map. simpl in *. auto.
+                * clear - H10 H7. apply H10; clear H10. apply in_split_r in H7.
+                  rewrite <- split_r_map. simpl in *. auto.
+          }
+          rewrite N.gt_lt_iff.
+          apply N.le_neq; auto.
+        + assert (~participates candidate candidate0 election).
+          { intro. apply n. clear - H2. apply getParticipantsCorrect in H2. auto. }
+          apply not_participant_no_votes in H2.
+          eapply (voteCount_unique _ _ _ _ H1) in H2. subst.
+          assert (participates candidate winner election).
+          { rewrite <- Heql in *. apply in_tally_participant in H4. apply getParticipantsCorrect.
+            auto. }
+          
+          apply participant_nonzero_votes in H2. destruct H2. 
+          apply (voteCount_unique _ _ _ _ H5) in H2.
+          rewrite N.gt_lt_iff.
+          subst.
+          replace (x + 1) with (N.succ x).
+          apply n_succ_gt_O.
+          rewrite N.add_1_r. auto.
+Qed.
