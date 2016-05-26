@@ -90,7 +90,7 @@ Section candidate.
                end
     end.
 
-  Definition runPluralityElection election :=
+  Definition runPluralityElection election : option candidate :=
     let allCandidates := getParticipants election in
     let tally := addTallies allCandidates election in
     getMaxCand tally.
@@ -443,65 +443,65 @@ Section cand.
    Qed.
              
 
-Lemma not_participant_no_votes : forall cd election,
-            ~ participates candidate cd election -> voteCount candidate cd election 0.
-          Proof.
-            induction election; intros.
-            - constructor.
-            - simpl in *. intuition.
-              apply voteCountOther; auto.
-          Qed.
-
-              Lemma voteCount_decidable : forall cd election,
-                  exists n, voteCount candidate cd election n.
-              Proof.
-                induction election; intros. exists 0. constructor.
-                destruct IHelection.
-                destruct (rel_dec_p cd a). subst. 
-                exists (x + 1). constructor; auto.
-                exists x. constructor; auto.
-              Qed.
-              
-          
-          Lemma participant_nonzero_votes : forall cd election,
-              participates candidate cd election -> exists n, voteCount candidate cd election (n + 1).
-          Proof.
-            induction election; intros.
-            - inversion H.
-            - simpl in H. destruct H.
-              + subst.
-                destruct (voteCount_decidable cd election); auto.
-                exists x. constructor; auto.
-              + intuition. destruct H0.
-                destruct (rel_dec_p cd a).
-                subst. exists (x + 1 ). constructor; auto.
-                exists x. apply voteCountOther; auto.
-          Qed.
-
-                      Lemma in_tally_participant : forall cd ct election participants,
-                In (cd, ct) (addTallies candidate reldec_candidate participants election) ->
-                In cd participants.
-            Proof.
-              induction participants; intros.
-              - simpl in *. auto.
-              - simpl in *. destruct H.
-                + inv H. auto.
-                + intuition.
-            Qed.
-
-                      Lemma n_succ_gt_O : forall (n:N),   0 < N.succ n.
-            induction n using N.peano_ind.
-            rewrite <- N.compare_lt_iff. auto.
-            rewrite  <- N.compare_lt_iff in *. simpl in *. destruct (N.succ n). congruence.
-            auto.
-                      Qed.
+   Lemma not_participant_no_votes : forall cd election,
+       ~ participates candidate cd election -> voteCount candidate cd election 0.
+   Proof.
+     induction election; intros.
+     - constructor.
+     - simpl in *. intuition.
+       apply voteCountOther; auto.
+   Qed.
+   
+   Lemma voteCount_decidable : forall cd election,
+       exists n, voteCount candidate cd election n.
+   Proof.
+     induction election; intros. exists 0. constructor.
+     destruct IHelection.
+     destruct (rel_dec_p cd a). subst. 
+     exists (x + 1). constructor; auto.
+     exists x. constructor; auto.
+   Qed.
+   
+   
+   Lemma participant_nonzero_votes : forall cd election,
+       participates candidate cd election -> exists n, voteCount candidate cd election (n + 1).
+   Proof.
+     induction election; intros.
+     - inversion H.
+     - simpl in H. destruct H.
+       + subst.
+         destruct (voteCount_decidable cd election); auto.
+         exists x. constructor; auto.
+       + intuition. destruct H0.
+         destruct (rel_dec_p cd a).
+         subst. exists (x + 1 ). constructor; auto.
+         exists x. apply voteCountOther; auto.
+   Qed.
+   
+   Lemma in_tally_participant : forall cd ct election participants,
+       In (cd, ct) (addTallies candidate reldec_candidate participants election) ->
+       In cd participants.
+   Proof.
+     induction participants; intros.
+     - simpl in *. auto.
+     - simpl in *. destruct H.
+       + inv H. auto.
+       + intuition.
+   Qed.
+   
+   Lemma n_succ_gt_O : forall (n:N),   0 < N.succ n.
+     induction n using N.peano_ind.
+     rewrite <- N.compare_lt_iff. auto.
+     rewrite  <- N.compare_lt_iff in *. simpl in *. destruct (N.succ n). congruence.
+     auto.
+   Qed.
    
    Theorem pluralityCorrect :
      forall election winner,
        runPluralityElection candidate reldec_candidate election = Some winner ->
        hasPlurality candidate winner election.
    Proof.
-     unfold runPluralityElection.  intros.
+     unfold runPluralityElection. (*split;*) intros.
      -  unfold getMaxCand in H. destruct (addTallies candidate reldec_candidate (getParticipants candidate reldec_candidate election) election) eqn:?; try congruence.
         destruct (getMax' candidate (p :: l) (fst p, 0, false)) eqn:?.
         destruct p0. destruct b eqn:?; inversion H; subst; clear H.
@@ -559,4 +559,70 @@ Lemma not_participant_no_votes : forall cd election,
           replace (x + 1) with (N.succ x).
           apply n_succ_gt_O.
           rewrite N.add_1_r. auto.
-Qed.
+(*     - unfold getMaxCand.
+       destruct (addTallies candidate reldec_candidate
+                            (getParticipants candidate reldec_candidate election) election) eqn:?.
+       + destruct (getParticipants candidate reldec_candidate election) eqn:?.
+         * unfold hasPlurality in *.
+
+           Lemma not_participant_not_winner :
+             forall election winner,
+               ~participates candidate winner election ->
+               ~ hasPlurality candidate winner election.
+           Proof.
+             intros. apply not_participant_no_votes in H.
+             intro. unfold hasPlurality in *.
+             
+             induction election. 
+             - intros. assert (forall c : candidate, False).
+               intro. specialize (H0 c 0).
+               intro. unfold hasPlurality in *.*)
+               
+                   
+
+   Qed.
+
+End cand.
+
+
+Require Import EqNat.
+Require Import NPeano.
+
+Global Instance RelDec_eq : RelDec (@eq nat) :=
+{ rel_dec := EqNat.beq_nat }.
+
+Global Instance RelDec_eq_correct : RelDec_Correct (RelDec_eq).
+constructor. exact beq_nat_true_iff.
+Defined.
+
+Global Instance RelDec_lt : RelDec lt :=
+{ rel_dec := NPeano.ltb }.
+
+Global Instance RelDec_le : RelDec le :=
+{ rel_dec := NPeano.leb }.
+
+Global Instance RelDec_gt : RelDec gt :=
+{ rel_dec := fun x y => NPeano.ltb y x }.
+
+Global Instance RelDec_ge : RelDec ge :=
+{ rel_dec := fun x y => NPeano.leb y x }.
+
+Definition an_election := [0; 0; 1].
+
+Definition applied_theorem := pluralityCorrect _ _ _ an_election 0.
+
+Record Result_and_proof (election : list nat) := result_and_proof
+                                        { winner : nat;
+                                          evidence : (hasPlurality nat winner election)
+                                                     }.
+
+Definition makeEvidence (election : list nat) : option (Result_and_proof election).
+  remember (runPluralityElection _ _ election).
+  destruct o.
+  symmetry in Heqo. apply (pluralityCorrect _ _ _ ) in Heqo.
+  exact (Some (result_and_proof _ n Heqo )).
+  exact None.
+Defined.
+
+Definition result_and_evidence : option (Result_and_proof an_election) := makeEvidence an_election.
+  

@@ -2,6 +2,7 @@ Require Import SF_imp.
 Require Import SF_tests.
 Require Import RelDec.
 Require Import List.
+Require Import Plurality.
 Import ListNotations.
 
 Extraction Language Haskell.
@@ -30,3 +31,4 @@ Extract Inlined Constant eqb_t => "(Prelude.==)".
 Extract Inlined Constant reldec_t => "(Prelude.==)".
 
 Separate Extraction SF_imp SF_tests.
+Separate Extraction Plurality.
