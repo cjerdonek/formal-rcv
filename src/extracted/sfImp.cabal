@@ -31,6 +31,7 @@ library
     SF_tests
     Specif
     BinIntConvert
+    Plurality
     Text.Parsing.BLT
     Text.Parsing.OpenRCVJSON
     Text.Parsing.ElectSON
@@ -86,21 +87,21 @@ test-suite electSONTests
     tasty-quickcheck,
     tasty-hunit
 
-executable rcv_testcase
-  hs-source-dirs: executables
-  default-language:    Haskell2010
+-- executable rcv_testcase
+--   hs-source-dirs: executables
+--   default-language:    Haskell2010
 
-  main-is: RCVTestCase.hs
+--   main-is: RCVTestCase.hs
 
-  build-depends:
-    base >= 4.7,
-    simple-get-opt >= 0.1 && < 0.2,
-    bytestring,
-    directory,
-    filepath,
-    process,
-    sfImp
-  ghc-options: -Wall
+--   build-depends:
+--     base >= 4.7,
+--     simple-get-opt >= 0.1 && < 0.2,
+--     bytestring,
+--     directory,
+--     filepath,
+--     process,
+--     sfImp
+--   ghc-options: -Wall
 
 executable rcv_election
   hs-source-dirs: executables
@@ -110,7 +111,20 @@ executable rcv_election
 
   build-depends:
     base >= 4.7,
+    aeson >= 0.10.0.0 && < 0.11,
     bytestring,
-    containers,
+    sfImp
+  ghc-options: -Wall
+
+executable plurality_election
+  hs-source-dirs:      executables
+  default-language:    Haskell2010
+
+  main-is: PluralityElection.hs
+
+  build-depends:
+    base >= 4.7,
+    aeson >= 0.10.0.0 && < 0.11,
+    bytestring,
     sfImp
   ghc-options: -Wall

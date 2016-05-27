@@ -1,24 +1,17 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE ParallelListComp #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Text.Parsing.ElectSON
-( Election(..)
-, Ballot(..)
-, getElection
-, encodeElection
-, ElectionResults(..)
-, encodeResults
-, getElectionResults
-) where
+module Text.Parsing.ElectSON where
 
 #if !MIN_VERSION_base(4,8,0)
 import Data.Functor
 #endif
 
-import Data.ByteString.Lazy (ByteString)
-import Data.Text
-import Data.Set (Set)
+import           Data.ByteString.Lazy (ByteString)
+import           Data.List (group, sort)
+import           Data.Text (Text)
 import qualified Data.Set as Set
 import qualified Data.Vector as Vec
 
@@ -26,133 +19,161 @@ import Data.Aeson
 import Data.Aeson.Types
 import Data.Aeson.Parser
 
+optField :: ToJSON a => Text -> Maybe a -> [Pair] -> [Pair]
+optField _  Nothing  xs = xs
+optField nm (Just x) xs = (nm .= x) : xs
 
-data Election c =
-  Election
-  { electionMeta          :: Object
-  , electionCandidates    :: Set c
-  , electionBallots       :: [Ballot c]
+-- type decls
+
+-- | An Election is the top-level JSON representation of an election:
+--   this includes some fields that are only important for testing.
+data Election vote = Election
+  { elIsTest     :: Bool
+  , elCounts     :: Maybe [Int]
+  , elVotes      :: [vote]
+  , elCandidates :: [Integer]
+  , elTiebreak   :: [Integer]
+  , elResults    :: Maybe Results
   } deriving (Eq, Show)
 
-data Ballot c = Ballot [c]
- deriving (Eq, Show)
-
-data ElectionResults c =
-  ElectionResults
-  { electionResultsMeta :: Object
-  , electionWinner :: Maybe c
-  , electionRecord :: [[c]]
-  , electionBins   :: [[(c, Integer)]]
+-- | An RCVVote represents a ranking of all the candidates, as well as
+--   a unique identifier for that vote.
+data RCVVote = RCVVote
+  { rcvTest  :: Bool
+  , rcvId    :: Integer
+  , rcvRanks :: [[Integer]]
   } deriving (Eq, Show)
 
+-- | A PluralityVote represents a vote for a single candidate, as well
+--   as a unique identifier for that vote.
+data PluralityVote = PluralityVote
+  { plTest   :: Bool
+  , plId     :: Integer
+  , plChoice :: Integer
+  } deriving (Eq, Show)
 
-getElection :: ByteString -> Either String (Election Text)
-getElection input = case decode input of
-  Nothing -> Left "Input was not valid JSON"
-  Just v ->  parseEither parseElection v
+-- | The results of an election include a winner as optionally a
+--   record of how that winner was chosen by elimination of
+--   successive candidates.
+data Results = Results
+  { rsWinner :: Integer
+  , rsRecord :: Maybe [Record]
+  } deriving (Eq, Show)
 
-parseElection :: Value -> Parser (Election Text)
-parseElection = withObject "election" $ \e -> do
-  electionMeta <- e .: "_meta"
-  cs           <- e .: "candidates"
-  bs           <- e .: "ballots"
+-- | A Record is a step in the vote-counting process, with a tally
+--   of votes per candidate and a list of the eliminated candidates
+data Record = Record
+  { rcTally      :: [(Integer, Integer)]
+  , rcEliminated :: [Integer]
+  } deriving (Eq, Show)
 
-  electionCandidates <- withArray "candidates"
-    parseCandidates cs
-  electionBallots    <- withArray "ballots"
-    (parseBallots electionCandidates) bs
+-- To/FromJSON instances
 
-  return Election{..}
+class GetCandidates vote where
+  getCandidates :: vote -> [Integer]
 
-  where
-  parseCandidates :: Array -> Parser (Set Text)
-  parseCandidates a = do
-    cs <- mapM aux (Vec.toList a)
-    return (Set.fromList cs)
-    where
-    aux :: Value -> Parser Text
-    aux (String t) = return t
-    aux v = typeMismatch "string candidate name" v
+instance GetCandidates RCVVote where
+instance GetCandidates PluralityVote where
 
-encodeElection :: Election Text -> ByteString
-encodeElection Election{..} = encode $ object
-  [ "_meta"      .= electionMeta
-  , "candidates" .= Vec.fromList (Set.toList electionCandidates)
-  , "ballots"    .= Vec.fromList (fmap ballotVal electionBallots)
-  ]
-  where
-  ballotVal (Ballot vs) = Array (Vec.fromList (fmap String vs))
+instance (GetCandidates v, FromJSON v) => FromJSON (Election v) where
+  parseJSON = withObject "election" $ \o -> do
+    elIsTest   <- o .:? "isTest" .!= False
+    elCounts   <- o .:? "counts"
+    elVotes    <- o .:  "votes"
+    elResults  <- o .:? "results"
+    elTiebreak <- o .:? "tiebreak" .!= []
+    let elCandidates = sortNub (concat (map getCandidates elVotes))
+    return Election { .. }
 
-parseBallots :: Set Text -> Array -> Parser [Ballot Text]
-parseBallots candidates a = do
-  bs <- mapM parseBallot (Vec.toList a)
-  return bs
-  where
-  parseBallot :: Value -> Parser (Ballot Text)
-  parseBallot  = withArray "ballot" $ \a -> do
-    vs <- mapM aux (Vec.toList a)
-    return (Ballot vs)
-  aux :: Value -> Parser Text
-  aux (String t) | Set.member t candidates = return t
-                 | otherwise = typeMismatch "known candidate" (String t)
-  aux v = typeMismatch "valid candidate type" v
+instance ToJSON v => ToJSON (Election v) where
+  toJSON Election { .. } = object
+    $ optField "results" elResults
+    [ "isTest"   .= elIsTest
+    , "counts"   .= elCounts
+    , "votes"    .= elVotes
+    , "tiebreak" .= elTiebreak
+    ]
 
+instance FromJSON RCVVote where
+  parseJSON = withObject "vote" $ \o -> do
+    rcvTest  <- o .:? "test" .!= False
+    rcvId    <- o .:  "id"
+    rcvRanks <- o .:  "ranks"
+    return RCVVote { .. }
 
-encodeResults :: ElectionResults Text -> ByteString
-encodeResults ElectionResults{..} = encode $ object
-  [ "_meta"  .= electionResultsMeta
-  , "winner" .= case electionWinner of
-      Nothing -> object [ "error" .= String "no winner" ]
-      Just w  -> String w
-  , "record"  .= rs
-  , "bins"    .= bs
-  ]
-  where
-  rs = arrayOf (arrayOf String) electionRecord
-  bs = arrayOf (arrayOf bin)    electionBins
-  bin (c, vs) = object ["candidate" .= String c
-                       , "votes"    .= Number (fromInteger vs)
-                       ]
-  arrayOf :: (a -> Value) -> [a] -> Value
-  arrayOf f v = Array (Vec.fromList (fmap f v))
+instance ToJSON RCVVote where
+  toJSON RCVVote { .. } = object $
+    [ "id"    .= rcvId
+    , "ranks" .= rcvRanks
+    , "test"  .= rcvTest
+    ]
 
-getElectionResults :: ByteString -> Either String (ElectionResults Text)
-getElectionResults input = case eitherDecode input of
-  Left e -> Left ("Input was not valid JSON Value: " ++ e)
-  Right v -> parseEither parseElectionResults v
+instance FromJSON PluralityVote where
+  parseJSON = withObject "vote" $ \o -> do
+    plTest   <- o .:? "test" .!= False
+    plId     <- o .:  "id"
+    plChoice <- o .:  "selection"
+    return PluralityVote { .. }
+
+instance ToJSON PluralityVote where
+  toJSON PluralityVote { .. } = object $
+    [ "id"        .= plId
+    , "selection" .= plChoice
+    , "test"      .= plTest
+    ]
 
 
-parseElectionResults :: Value -> Parser (ElectionResults Text)
-parseElectionResults = withObject "election results" $ \r -> do
-  electionResultsMeta <- r .: "_meta"
-  win <- r .: "winner"
-  rec <- r .: "record"
-  bns <- r .: "bins"
-  electionWinner <- parseWinner win
-  electionRecord <- parseRecord rec
-  electionBins   <- parseBins   bns
-  return ElectionResults{..}
-  where
-  parseWinner :: Value -> Parser (Maybe Text)
-  parseWinner (String s) = return (Just s)
-  parseWinner (Object o) = return Nothing -- not exactly right
-  parseWinner v = typeMismatch "winning candidate" v
+instance FromJSON Results where
+  parseJSON = withObject "result" $ \o -> do
+    rsWinner <- o .:  "winner"
+    rsRecord <- o .:? "record"
+    return Results { .. }
 
-  parseArray :: Array -> (Value -> Parser a) -> Parser [a]
-  parseArray arr p = mapM p (Vec.toList arr)
+instance ToJSON Results where
+  toJSON Results { .. } = object
+    $ optField "record" rsRecord
+    [ "winner" .= rsWinner ]
 
-  parseText :: Value -> Parser Text
-  parseText (String t) = return t
-  parseText v = typeMismatch "text" v
 
-  parseRecord :: Array -> Parser [[Text]]
-  parseRecord a = parseArray a $ withArray "record" $ \i -> parseArray i parseText
+instance FromJSON Record where
+  parseJSON = withObject "record" $ \o -> do
+    tallies      <- o .: "tally"
+    rcTally      <- mapM go tallies
+    rcEliminated <- o .: "eliminated"
+    return Record { .. }
+    where go = withObject "tally element" $ \o ->
+            (,) <$> o .: "candidate" <*> o .: "firstChoices"
 
-  parseBins :: Array -> Parser [[(Text, Integer)]]
-  parseBins a = parseArray a $ withArray "bin" $ \i -> parseArray i parseBin
+instance ToJSON Record where
+  toJSON Record { .. } = object
+    [ "tally" .= [ object [ "candidate" .= x
+                          , "firstChoices" .= y
+                          ]
+                 | (x, y) <- rcTally
+                 ]
+    , "eliminated" .= rcEliminated
+    ]
 
-  parseBin :: Value -> Parser (Text, Integer)
-  parseBin = withObject "bin" $ \b -> do
-    c <- b .: "candidate"
-    v <- b .: "votes"
-    return (c,v)
+-- | If an election is a test and has a set of counts, we should
+--   repeat each vote by that number of counts.
+expandRCVTest :: Election v -> Election v
+expandRCVTest e@Election
+  { elIsTest = True
+  , elCounts = Just ns
+  , elVotes  = vs
+  } = e { elVotes = Prelude.concat
+                      [ replicate n v
+                      | v <- vs
+                      | n <- ns
+                      ]
+        }
+expand e = e
+
+sortNub :: Ord a => [a] -> [a]
+sortNub = map head . group . sort
+
+getElection :: (FromJSON v, GetCandidates v) => ByteString -> Either String (Election v)
+getElection = eitherDecode
+
+encodeElection :: ToJSON v => Election v -> ByteString
+encodeElection = encode
