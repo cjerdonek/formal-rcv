@@ -10,7 +10,7 @@ import qualified Data.ByteString.Lazy as B
 import           Text.Parsing.ElectSON
 
 import BinIntConvert
-import SF_imp
+import Plurality
 
 main :: IO ()
 main = do
@@ -25,31 +25,16 @@ catchParseErr _ (Right a) = return a
 catchParseErr ctx (Left e) = die msg
   where msg = "Fatal: when parsing " ++ ctx ++ ": " ++ e
 
-
-run :: Election RCVVote -> Maybe Results
+run :: Election PluralityVote -> Maybe Results
 run (Election {..}) = results
   where results = case winner of
           Just w -> Just $ Results
             { rsWinner = w
-            , rsRecord =
-                Just $ [ Record
-                           { rcTally      = b
-                           , rcEliminated = e
-                           }
-                       | e <- record
-                       | b <- bins
-                       ]
+            , rsRecord = Nothing
             }
           Nothing -> Nothing
-        bins = fmap (fmap (fmap n2int)) bins'
-        ((winner, record), bins') =
-          run_election relDec tieBreak votes elCandidates
-        votes = map rcvRanks elVotes
+        winner = runPluralityElection (==) votes
+        votes = map plChoice elVotes
 
 relDec :: Eq c => c -> c -> Bool
 relDec = (==)
-
--- Picked arbitrarily
-tieBreak :: [c] -> Maybe c
-tieBreak [] = Nothing
-tieBreak (c:_) = Just c

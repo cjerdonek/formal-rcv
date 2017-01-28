@@ -1,4 +1,3 @@
-
 module Main where
 
 import SimpleGetOpt
@@ -95,7 +94,7 @@ run c = do
 
   verbose $ putStrLn "Test output:" >> BC.putStrLn output
 
-  electionResults <- catch "election results invalid" $ getElectionResults output
+  electionResults <- catch "election results invalid" $ getElection output
 
   case testElectionOutput candidates test electionResults of
     TestResultMismatch s -> do
@@ -144,5 +143,3 @@ getBSContents :: String -> FilePath -> IO ByteString
 getBSContents name fp = do
   assertExists name fp
   B.readFile fp
-
-
