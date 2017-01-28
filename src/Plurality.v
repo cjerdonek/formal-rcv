@@ -545,7 +545,7 @@ Section cand.
           rewrite N.gt_lt_iff.
           apply N.le_neq; auto.
         + assert (~participates candidate candidate0 election).
-          { intro. apply n. clear - H2. apply getParticipantsCorrect in H2. auto. }
+          { intro. apply n. clear - H2 reldec_correct_candidate. apply getParticipantsCorrect in H2. auto. }
           apply not_participant_no_votes in H2.
           eapply (voteCount_unique _ _ _ _ H1) in H2. subst.
           assert (participates candidate winner election).
